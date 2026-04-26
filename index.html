@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+   <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    
+    <meta name="apple-mobile-web-app-title" content="숫자야구">
+    
+    <link rel="apple-touch-icon" href="apple-touch-icon.png">
+    
+    <title>아이폰 최적화 숫자 야구 게임</title>
+    <link rel="stylesheet" href="style.css">
+<body>
+
+    <div class="navigation theme-purple">
+        <ul>
+            <li class="list active">
+                <a href="#"><span class="icon"><ion-icon name="game-controller-outline"></ion-icon></span></a>
+            </li>
+            <li class="list">
+                <a href="#"><span class="icon"><ion-icon name="person-outline"></ion-icon></span></a>
+            </li>
+            <li class="list">
+                <a href="#"><span class="icon"><ion-icon name="chatbubble-outline"></ion-icon></span></a>
+            </li>
+            <li class="list">
+                <a href="#"><span class="icon"><ion-icon name="camera-outline"></ion-icon></span></a>
+            </li>
+            <li class="list">
+                <a href="#"><span class="icon"><ion-icon name="settings-outline"></ion-icon></span></a>
+            </li>
+            <div class="indicator"></div>
+        </ul>
+    </div>
+
+    <div class="game-container">
+        <h2>⚾ 숫자 야구 게임</h2>
+        <p>0~9 사이의 중복되지 않는 3자리 숫자를 맞춰보세요!</p>
+        
+        <div class="input-area">
+            <input type="text" id="user-input" maxlength="3" placeholder="예: 081" autocomplete="off" inputmode="numeric" pattern="[0-9]*">
+            <button id="submit-btn">확인</button>
+        </div>
+        
+        <div id="result-board"></div>
+        
+        <button id="restart-btn" style="display: none;">게임 다시 시작</button>
+    </div>
+
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+    <script src="script.js"></script>
+</body>
+</html>
