@@ -1,3 +1,19 @@
+// --- ☁️ 0. Firebase 데이터베이스 설정 (여기에 본인의 키를 넣으세요!) ---
+const firebaseConfig = {
+  apiKey: "AIzaSyBjwePOTKRF2TRYNWqrEg9lyQdZ7BEtEMk",
+  authDomain: "baseball-game-68fbb.firebaseapp.com",
+  projectId: "baseball-game-68fbb",
+  storageBucket: "baseball-game-68fbb.firebasestorage.app",
+  messagingSenderId: "188603859302",
+  appId: "1:188603859302:web:87ded952a72ed35b3088a7"
+};
+
+// 파이어베이스 초기화 및 데이터베이스 연결
+firebase.initializeApp(firebaseConfig);
+const db = firebase.database();
+const rankRef = db.ref('leaderboard'); // 'leaderboard'라는 이름의 저장소 사용
+
+
 // --- 1. 동적 메뉴 로직 ---
 const list = document.querySelectorAll('.list');
 let isSoundOn = true; 
@@ -8,13 +24,12 @@ function activeLink() {
 
     const menuId = this.id;
     if (menuId === 'menu-help') {
-        // 규칙 설명 창에서도 8번으로 안내를 수정했습니다.
         alert("⚾ 게임 규칙\n\n1. 컴퓨터의 3자리 숫자 맞추기!\n2. 8번의 기회 제한\n- 스트라이크: 숫자&위치 맞음\n- 볼: 숫자만 맞음\n\n⏱ 첫 숫자 입력 시 타이머 시작!\n💡 힌트 사용 시 시간에 +15초 페널티!");
     } else if (menuId === 'menu-sound') {
         isSoundOn = !isSoundOn;
         document.getElementById('sound-icon-svg').setAttribute('name', isSoundOn ? 'volume-high-outline' : 'volume-mute-outline');
     } else if (menuId === 'menu-hint') {
-        useHint(); // 힌트 함수 실행
+        useHint(); 
     }
 }
 list.forEach((item) => item.addEventListener('click', activeLink));
@@ -30,7 +45,6 @@ function playSound(audioObject) {
     if (isSoundOn) { audioObject.currentTime = 0; audioObject.play(); }
 }
 
-// 꽃가루 생성 함수
 function shootConfetti() {
     const colors = ['#f44336', '#4caf50', '#ffeb3b', '#2196f3', '#9c27b0'];
     for(let i = 0; i < 50; i++) {
@@ -40,16 +54,18 @@ function shootConfetti() {
         div.style.animationDelay = Math.random() * 2 + 's';
         div.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
         document.body.appendChild(div);
-        setTimeout(() => div.remove(), 3000); // 3초 뒤 화면에서 삭제
+        setTimeout(() => div.remove(), 3000); 
     }
 }
 
 
-// --- 3. 타이머 및 명예의 전당(리더보드) 로직 ---
+// --- 3. 타이머 및 파이어베이스 명예의 전당 로직 ---
 let timerInterval;
 let elapsedTime = 0;
 let isTimerRunning = false;
-let leaderboard = JSON.parse(localStorage.getItem('baseballRank')) || []; // 로컬 저장소에서 불러오기
+
+// 내 기록이 3등 안에 드는지 확인하기 위해 순위를 임시 저장할 배열
+let currentTop3 = []; 
 
 const timerDisplay = document.getElementById('timer-display');
 const rankList = document.getElementById('rank-list');
@@ -57,12 +73,11 @@ const nameModal = document.getElementById('name-modal');
 const playerNameInput = document.getElementById('player-name');
 const recordTimeDisplay = document.getElementById('record-time');
 
-// 화면에 타이머 00:00 형식으로 그리기
 function updateTimerDisplay() {
     let m = Math.floor(elapsedTime / 60).toString().padStart(2, '0');
     let s = (elapsedTime % 60).toString().padStart(2, '0');
     timerDisplay.innerText = `⏱ ${m}:${s}`;
-    if(elapsedTime > 0) timerDisplay.style.color = "#ffeb3b"; // 시작되면 노란색
+    if(elapsedTime > 0) timerDisplay.style.color = "#ffeb3b"; 
 }
 
 function startTimer() {
@@ -74,27 +89,34 @@ function startTimer() {
     }, 1000);
 }
 
-// 명예의 전당 화면에 그리기
-function renderLeaderboard() {
+// ☁️ 실시간 랭킹 리스너 (누군가 기록을 깨면 내 화면도 자동으로 갱신됨!)
+rankRef.orderByChild('time').limitToFirst(3).on('value', (snapshot) => {
     rankList.innerHTML = '';
-    if(leaderboard.length === 0) {
-        rankList.innerHTML = '<li style="justify-content:center; color:#8b949e;">아직 기록이 없습니다.</li>';
+    currentTop3 = [];
+    
+    if (!snapshot.exists()) {
+        rankList.innerHTML = '<li style="justify-content:center; color:#8b949e;">아직 기록이 없습니다. 1등에 도전하세요!</li>';
         return;
     }
-    // 시간을 기준으로 오름차순(빠른 순) 정렬
-    leaderboard.sort((a, b) => a.time - b.time);
-    leaderboard.slice(0, 3).forEach((record, index) => {
-        let medals = ['🥇', '🥈', '🥉'];
+
+    // 데이터를 가져와서 배열에 넣고 다시 시간순 정렬 (파이어베이스 구조상 필요)
+    snapshot.forEach((childSnapshot) => {
+        currentTop3.push(childSnapshot.val());
+    });
+    currentTop3.sort((a, b) => a.time - b.time);
+
+    // 화면에 그리기
+    let medals = ['🥇', '🥈', '🥉'];
+    currentTop3.forEach((record, index) => {
         rankList.innerHTML += `<li><span>${medals[index]} ${record.name}</span> <span style="color:#ffeb3b;">${record.time}초</span></li>`;
     });
-}
-renderLeaderboard();
+});
 
 
 // --- 4. 숫자 야구 게임 핵심 로직 ---
 let targetNumbers = [];
 let attempts = 0;
-const MAX_ATTEMPTS = 8; // ⭐ 실패 횟수를 6에서 8로 변경했습니다!
+const MAX_ATTEMPTS = 8; 
 let hintUsed = false; 
 
 const userInput = document.getElementById('user-input');
@@ -121,7 +143,6 @@ function initGame() {
     console.log("치트키(정답):", targetNumbers.join(''));
 }
 
-// 💡 힌트 사용
 function useHint() {
     if (attempts === 0 && !isTimerRunning) { alert("게임을 시작한 뒤에 힌트를 쓸 수 있습니다!"); return; }
     if (hintUsed) { alert("힌트는 게임당 한 번만 사용할 수 있습니다!"); return; }
@@ -133,7 +154,6 @@ function useHint() {
     hintUsed = true;
 }
 
-// 첫 입력 시 타이머 시작
 userInput.addEventListener('input', () => {
     if (userInput.value.length > 0) startTimer();
 });
@@ -160,7 +180,6 @@ function playGame() {
     let resultHTML = `<div class="log-entry"><span class="attempt-count">[${attempts}/${MAX_ATTEMPTS}]</span> 입력: <strong>${guessStr}</strong> ➔ `;
     
     if (strikes === 3) {
-        // [정답]
         clearInterval(timerInterval); 
         playSound(winSound);
         shootConfetti(); 
@@ -169,8 +188,8 @@ function playGame() {
         resultBoard.insertAdjacentHTML('beforeend', resultHTML); 
         endGame(`<div style="color:#4caf50; font-size:1.2em; font-weight:bold; margin-top:10px; text-align:center;">승리! 경과 시간: ${elapsedTime}초</div>`);
         
-        // Top 3 진입 확인
-        if (leaderboard.length < 3 || elapsedTime < leaderboard[2].time || (leaderboard[2] && elapsedTime === leaderboard[2].time)) {
+        // ☁️ 파이어베이스의 기록과 비교하여 Top 3 진입 확인
+        if (currentTop3.length < 3 || elapsedTime < currentTop3[currentTop3.length - 1].time) {
             setTimeout(() => {
                 recordTimeDisplay.innerText = elapsedTime;
                 nameModal.classList.remove('hidden');
@@ -178,7 +197,6 @@ function playGame() {
             }, 1000); 
         }
     } else {
-        // [오답]
         if (strikes === 0 && balls === 0) resultHTML += `<span class="out">아웃!</span>`;
         else {
             if (strikes > 0) resultHTML += `<span class="strike">${strikes}S</span> `;
@@ -209,15 +227,15 @@ function endGame(messageHTML) {
     resultBoard.scrollTop = resultBoard.scrollHeight; 
 }
 
-// 닉네임 저장
+// ☁️ 닉네임을 파이어베이스 서버에 저장
 document.getElementById('save-name-btn').addEventListener('click', () => {
     let name = playerNameInput.value.trim().toUpperCase() || 'ANON';
-    leaderboard.push({ name: name, time: elapsedTime });
-    leaderboard.sort((a, b) => a.time - b.time);
-    if(leaderboard.length > 3) leaderboard.pop(); 
     
-    localStorage.setItem('baseballRank', JSON.stringify(leaderboard)); 
-    renderLeaderboard(); 
+    // 파이어베이스 DB로 푸시!
+    rankRef.push({
+        name: name,
+        time: elapsedTime
+    });
     
     nameModal.classList.add('hidden'); 
     playerNameInput.value = '';
