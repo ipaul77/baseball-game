@@ -161,3 +161,30 @@ button, input {
     font-weight: bold;
     margin-right: 8px;
 }
+
+/* --- 실패 메시지 스타일 --- */
+.fail-message {
+    margin-top: 20px;
+    text-align: center;
+    color: #f44336; /* 강렬한 빨간색 */
+    animation: shake 0.5s ease-in-out; /* 등장할 때 흔들리는 애니메이션 */
+}
+
+.fail-message h1 {
+    font-size: 3.5em; /* 아주 큰 글씨 */
+    margin-bottom: 10px;
+    letter-spacing: 2px;
+    text-shadow: 0 0 15px rgba(244, 67, 54, 0.6); /* 붉은색 네온사인 같은 그림자 효과 */
+}
+
+.fail-message p {
+    font-size: 1.2em;
+    color: #e6edf3; /* 정답 텍스트는 보기 편한 밝은 색으로 */
+}
+
+/* 텍스트 흔들림 애니메이션 (Keyframes) */
+@keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    20%, 60% { transform: translateX(-10px); }
+    40%, 80% { transform: translateX(10px); }
+}

@@ -93,10 +93,17 @@ function playGame() {
         // 스크롤이 생길 경우 항상 가장 아래쪽(최신 입력)을 보여주기 위함
         resultBoard.scrollTop = resultBoard.scrollHeight;
 
-        // --- 6번 모두 틀렸는지 (게임 오버) 확인 ---
+// --- 6번 모두 틀렸는지 (게임 오버) 확인 ---
         if (attempts >= MAX_ATTEMPTS) {
             outSound.play(); // 실패 시 아웃 사운드 재생
-            endGame(`<div style="color:#f44336; font-size:1.1em; font-weight:bold; margin-top:15px; text-align:center;">💀 게임 오버! 정답은 [ ${targetNumbers.join('')} ] 였습니다.</div>`);
+            
+            // 크고 멋진 실패 메시지 HTML 구조 삽입
+            endGame(`
+                <div class="fail-message">
+                    <h1>실패!</h1>
+                    <p>정답은 <strong>[ ${targetNumbers.join('')} ]</strong> 였습니다.</p>
+                </div>
+            `);
         } else {
             // 게임 오버가 아닐 때만 일반 사운드 재생
             if (strikes === 0 && balls === 0) {
@@ -110,7 +117,6 @@ function playGame() {
                 ballSound.play();
             }
         }
-    }
 
     userInput.value = "";
     userInput.focus();
