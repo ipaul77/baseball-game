@@ -8,7 +8,8 @@ function activeLink() {
 
     const menuId = this.id;
     if (menuId === 'menu-help') {
-        alert("⚾ 게임 규칙\n\n1. 컴퓨터의 3자리 숫자 맞추기!\n2. 6번의 기회 제한\n- 스트라이크: 숫자&위치 맞음\n- 볼: 숫자만 맞음\n\n⏱ 첫 숫자 입력 시 타이머 시작!\n💡 힌트 사용 시 시간에 +15초 페널티!");
+        // 규칙 설명 창에서도 8번으로 안내를 수정했습니다.
+        alert("⚾ 게임 규칙\n\n1. 컴퓨터의 3자리 숫자 맞추기!\n2. 8번의 기회 제한\n- 스트라이크: 숫자&위치 맞음\n- 볼: 숫자만 맞음\n\n⏱ 첫 숫자 입력 시 타이머 시작!\n💡 힌트 사용 시 시간에 +15초 페널티!");
     } else if (menuId === 'menu-sound') {
         isSoundOn = !isSoundOn;
         document.getElementById('sound-icon-svg').setAttribute('name', isSoundOn ? 'volume-high-outline' : 'volume-mute-outline');
@@ -93,8 +94,8 @@ renderLeaderboard();
 // --- 4. 숫자 야구 게임 핵심 로직 ---
 let targetNumbers = [];
 let attempts = 0;
-const MAX_ATTEMPTS = 6;
-let hintUsed = false; // 힌트를 여러 번 쓰지 못하게 제한
+const MAX_ATTEMPTS = 8; // ⭐ 실패 횟수를 6에서 8로 변경했습니다!
+let hintUsed = false; 
 
 const userInput = document.getElementById('user-input');
 const submitBtn = document.getElementById('submit-btn');
@@ -109,7 +110,7 @@ function initGame() {
     hintUsed = false;
     clearInterval(timerInterval);
     updateTimerDisplay();
-    timerDisplay.style.color = "#8b949e"; // 초기 회색
+    timerDisplay.style.color = "#8b949e"; 
     
     let numbers = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
     for (let i = 0; i < 3; i++) {
@@ -120,12 +121,11 @@ function initGame() {
     console.log("치트키(정답):", targetNumbers.join(''));
 }
 
-// 💡 특별 기능: 힌트(찬스) 사용
+// 💡 힌트 사용
 function useHint() {
     if (attempts === 0 && !isTimerRunning) { alert("게임을 시작한 뒤에 힌트를 쓸 수 있습니다!"); return; }
     if (hintUsed) { alert("힌트는 게임당 한 번만 사용할 수 있습니다!"); return; }
     
-    // 정답 중 하나를 무작위로 알려주고 시간 15초 페널티
     let randomTarget = targetNumbers[Math.floor(Math.random() * 3)];
     alert(`💡 힌트: 정답에 숫자 [ ${randomTarget} ] 가 포함되어 있습니다!\n(페널티: 시간 15초 증가)`);
     elapsedTime += 15;
@@ -133,7 +133,7 @@ function useHint() {
     hintUsed = true;
 }
 
-// 사용자가 입력창에 글자를 치는 순간 타이머 시작
+// 첫 입력 시 타이머 시작
 userInput.addEventListener('input', () => {
     if (userInput.value.length > 0) startTimer();
 });
@@ -161,9 +161,9 @@ function playGame() {
     
     if (strikes === 3) {
         // [정답]
-        clearInterval(timerInterval); // 타이머 멈춤
+        clearInterval(timerInterval); 
         playSound(winSound);
-        shootConfetti(); // 🎉 꽃가루 효과 실행
+        shootConfetti(); 
         
         resultHTML += `<span class="strike">정답! (${elapsedTime}초) 🎉</span></div>`;
         resultBoard.insertAdjacentHTML('beforeend', resultHTML); 
@@ -175,7 +175,7 @@ function playGame() {
                 recordTimeDisplay.innerText = elapsedTime;
                 nameModal.classList.remove('hidden');
                 playerNameInput.focus();
-            }, 1000); // 승리 후 1초 뒤에 이름 입력창 띄우기
+            }, 1000); 
         }
     } else {
         // [오답]
@@ -189,7 +189,7 @@ function playGame() {
         resultBoard.scrollTop = resultBoard.scrollHeight;
 
         if (attempts >= MAX_ATTEMPTS) {
-            clearInterval(timerInterval); // 게임오버 시 타이머 멈춤
+            clearInterval(timerInterval); 
             playSound(outSound);
             endGame(`<div class="fail-message"><h1>실패!</h1><p>정답: <strong>[ ${targetNumbers.join('')} ]</strong></p></div>`);
         } else {
@@ -209,17 +209,17 @@ function endGame(messageHTML) {
     resultBoard.scrollTop = resultBoard.scrollHeight; 
 }
 
-// 닉네임 저장 버튼 로직
+// 닉네임 저장
 document.getElementById('save-name-btn').addEventListener('click', () => {
     let name = playerNameInput.value.trim().toUpperCase() || 'ANON';
     leaderboard.push({ name: name, time: elapsedTime });
     leaderboard.sort((a, b) => a.time - b.time);
-    if(leaderboard.length > 3) leaderboard.pop(); // 3등까지만 유지
+    if(leaderboard.length > 3) leaderboard.pop(); 
     
-    localStorage.setItem('baseballRank', JSON.stringify(leaderboard)); // 브라우저에 저장
-    renderLeaderboard(); // 랭킹 갱신
+    localStorage.setItem('baseballRank', JSON.stringify(leaderboard)); 
+    renderLeaderboard(); 
     
-    nameModal.classList.add('hidden'); // 모달 닫기
+    nameModal.classList.add('hidden'); 
     playerNameInput.value = '';
 });
 
