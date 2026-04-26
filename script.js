@@ -1,18 +1,21 @@
-// --- ☁️ 0. Firebase 데이터베이스 설정 (여기에 본인의 키를 넣으세요!) ---
+// --- ☁️ 0. Firebase 데이터베이스 설정 ---
 const firebaseConfig = {
-  apiKey: "AIzaSyBjwePOTKRF2TRYNWqrEg9lyQdZ7BEtEMk",
-  authDomain: "baseball-game-68fbb.firebaseapp.com",
-  projectId: "baseball-game-68fbb",
-  storageBucket: "baseball-game-68fbb.firebasestorage.app",
-  messagingSenderId: "188603859302",
-  appId: "1:188603859302:web:87ded952a72ed35b3088a7"
+    apiKey: "AIzaSyBjwePOTKRF2TRYNwqREg9lyQdZ7BEtEMk",
+    authDomain: "baseball-game-68fbb.firebaseapp.com",
+    
+    // 👇 핵심 수정: 스크린샷에는 없었지만, Realtime Database 사용을 위해 반드시 추가해야 하는 주소입니다! 👇
+    databaseURL: "https://baseball-game-68fbb-default-rtdb.firebaseio.com",
+    
+    projectId: "baseball-game-68fbb",
+    storageBucket: "baseball-game-68fbb.firebasestorage.app",
+    messagingSenderId: "188603859302",
+    appId: "1:188603859302:web:87ded952a72ed35b3088a7"
 };
 
 // 파이어베이스 초기화 및 데이터베이스 연결
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
-const rankRef = db.ref('leaderboard'); // 'leaderboard'라는 이름의 저장소 사용
-
+const rankRef = db.ref('leaderboard');
 
 // --- 1. 동적 메뉴 로직 ---
 const list = document.querySelectorAll('.list');
