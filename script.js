@@ -1,4 +1,4 @@
-// --- 1. 내비게이션 메뉴 로직 (기존과 동일) ---
+// --- 1. 내비게이션 메뉴 로직 ---
 const list = document.querySelectorAll('.list');
 function activeLink() {
     list.forEach((item) => item.classList.remove('active'));
@@ -7,19 +7,23 @@ function activeLink() {
 list.forEach((item) => item.addEventListener('click', activeLink));
 
 
-// --- 🎵 오디오 객체 미리 불러오기 (여기를 추가하세요!) ---
+// --- 🎵 2. 외부 오디오 파일 미리 불러오기 ---
 const outSound = new Audio('out.mp3');
 const winSound = new Audio('win.mp3');
 const strikeSound = new Audio('strike.mp3');
 const ballSound = new Audio('ball.mp3');
 
 
-// --- 2. 숫자 야구 게임 로직 ---
-let targetNumbers = [];
+// --- 3. 숫자 야구 게임 로직 ---
+let targetNumbers = []; 
+let attempts = 0; // 시도 횟수를 기억할 변수 추가
+const MAX_ATTEMPTS = 6; // 최대 시도 가능 횟수
 
 function initGame() {
     targetNumbers = [];
+    attempts = 0; // 게임 시작 시 횟수 초기화
     let numbers = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9];
+    
     for (let i = 0; i < 3; i++) {
         let randomIndex = Math.floor(Math.random() * numbers.length);
         targetNumbers.push(numbers[randomIndex]);
@@ -52,6 +56,8 @@ function playGame() {
     const guessArr = guessStr.split('').map(Number);
     let strikes = 0;
     let balls = 0;
+    
+    attempts++; // 정상적인 입력이 들어오면 시도 횟수 1 증가
 
     for (let i = 0; i < 3; i++) {
         if (guessArr[i] === targetNumbers[i]) {
@@ -61,50 +67,70 @@ function playGame() {
         }
     }
 
-    let resultHTML = `<span class="log-entry">입력: <strong>${guessStr}</strong> ➔ `;
+    // --- 리스트에 쌓일 HTML 결과 텍스트 생성 ---
+    let resultHTML = `<div class="log-entry">
+        <span class="attempt-count">[${attempts}/${MAX_ATTEMPTS}]</span>
+        입력: <strong>${guessStr}</strong> ➔ `;
     
-    // --- 🎵 사운드 재생 로직 및 텍스트 추가 (이 부분을 수정하세요!) ---
     if (strikes === 3) {
-        // 정답일 때: 폭죽 사운드
+        // [정답] 3 스트라이크일 경우
         winSound.play();
-        resultBoard.insertAdjacentHTML('afterbegin', `<div style="color:#4caf50; font-size:1.2em; font-weight:bold; margin-bottom:10px;">🎉 축하합니다! 정답입니다!</div>`);
-        submitBtn.disabled = true;
-        restartBtn.style.display = "inline-block";
-    } else if (strikes === 0 && balls === 0) {
-        // 아웃일 때: 아웃 사운드
-        outSound.play();
-        resultHTML += `<span class="out">아웃!</span>`;
-    } else {
-        // 스트라이크나 볼이 있을 때
-        if (strikes > 0 && balls > 0) {
-            // 둘 다 있을 때는 소리가 겹치지 않게 스트라이크 소리 후 0.4초 뒤에 볼 소리 재생
-            strikeSound.play();
-            setTimeout(() => ballSound.play(), 400); 
-        } else if (strikes > 0) {
-            strikeSound.play();
-        } else if (balls > 0) {
-            ballSound.play();
-        }
+        resultHTML += `<span class="strike">정답입니다! 🎉</span></div>`;
+        resultBoard.insertAdjacentHTML('beforeend', resultHTML); // 아래로 리스트 추가
         
-        // 텍스트 출력
-        if (strikes > 0) resultHTML += `<span class="strike">${strikes} 스트라이크</span> `;
-        if (balls > 0) resultHTML += `<span class="ball">${balls} 볼</span>`;
-    }
-    resultHTML += `</span>`;
+        endGame(`<div style="color:#4caf50; font-size:1.2em; font-weight:bold; margin-top:15px; text-align:center;">축하합니다! 게임 승리!</div>`);
+    } else {
+        // [오답] 정답이 아닐 경우 스트라이크/볼 판정
+        if (strikes === 0 && balls === 0) {
+            resultHTML += `<span class="out">아웃!</span>`;
+        } else {
+            if (strikes > 0) resultHTML += `<span class="strike">${strikes} 스트라이크</span> `;
+            if (balls > 0) resultHTML += `<span class="ball">${balls} 볼</span>`;
+        }
+        resultHTML += `</div>`;
+        resultBoard.insertAdjacentHTML('beforeend', resultHTML); // 아래로 리스트 추가
 
-    if (strikes !== 3) {
-        resultBoard.insertAdjacentHTML('afterbegin', resultHTML);
+        // 스크롤이 생길 경우 항상 가장 아래쪽(최신 입력)을 보여주기 위함
+        resultBoard.scrollTop = resultBoard.scrollHeight;
+
+        // --- 6번 모두 틀렸는지 (게임 오버) 확인 ---
+        if (attempts >= MAX_ATTEMPTS) {
+            outSound.play(); // 실패 시 아웃 사운드 재생
+            endGame(`<div style="color:#f44336; font-size:1.1em; font-weight:bold; margin-top:15px; text-align:center;">💀 게임 오버! 정답은 [ ${targetNumbers.join('')} ] 였습니다.</div>`);
+        } else {
+            // 게임 오버가 아닐 때만 일반 사운드 재생
+            if (strikes === 0 && balls === 0) {
+                outSound.play();
+            } else if (strikes > 0 && balls > 0) {
+                strikeSound.play();
+                setTimeout(() => ballSound.play(), 400); 
+            } else if (strikes > 0) {
+                strikeSound.play();
+            } else if (balls > 0) {
+                ballSound.play();
+            }
+        }
     }
-    // -----------------------------------------------------------
 
     userInput.value = "";
     userInput.focus();
 }
 
+// 게임 종료 처리를 담당하는 헬퍼 함수
+function endGame(messageHTML) {
+    resultBoard.insertAdjacentHTML('beforeend', messageHTML);
+    submitBtn.disabled = true; // 입력 금지
+    userInput.disabled = true; // 텍스트창 입력 금지
+    restartBtn.style.display = "inline-block"; // 다시 시작 버튼 표시
+}
+
+// 게임 다시 시작 버튼 로직
 restartBtn.addEventListener('click', () => {
     resultBoard.innerHTML = '';
     submitBtn.disabled = false;
+    userInput.disabled = false;
     restartBtn.style.display = 'none';
+    userInput.focus();
     initGame();
 });
 

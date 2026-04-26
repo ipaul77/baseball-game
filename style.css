@@ -154,3 +154,10 @@ button, input {
         transform: scale(0.75); /* 비율을 더 줄임 */
     }
 }
+
+/* 시도 횟수 카운터 스타일 */
+.attempt-count {
+    color: #8b949e;
+    font-weight: bold;
+    margin-right: 8px;
+}
