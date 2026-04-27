@@ -7,7 +7,7 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="숫자야구">
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
-    <title>숫자 야구</title>
+    <title>아이폰 최적화 숫자 야구</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
@@ -44,9 +44,15 @@
 
     <div id="screen-lobby" class="game-container hidden">
         <h2>⚔️ 온라인 대기실</h2>
-        <p id="lobby-status" class="highlight-text">상대방을 찾고 있습니다... ⏳</p>
-        <div class="loader"></div>
-        <button id="btn-cancel-match" class="mode-btn btn-red">취소하고 나가기</button>
+        
+        <button id="btn-create-room" class="mode-btn btn-green" style="margin-bottom: 15px;">➕ 새로운 방 만들기</button>
+        
+        <div class="room-list-container">
+            <ul id="room-list">
+                </ul>
+        </div>
+        
+        <button id="btn-leave-lobby" class="mode-btn btn-red" style="margin-top: 15px;">메인으로 돌아가기</button>
     </div>
 
     <div id="screen-single" class="game-container hidden">
@@ -115,8 +121,11 @@
 
     <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
     <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
+    
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
+    
     <script src="script.js"></script>
+
 </body>
 </html>
