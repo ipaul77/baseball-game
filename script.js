@@ -1,21 +1,17 @@
-// --- ☁️ 0. Firebase 데이터베이스 설정 ---
+// --- ☁️ 0. Firebase 데이터베이스 설정 (본인 키와 databaseURL 필수 입력!) ---
 const firebaseConfig = {
-    apiKey: "AIzaSyBjwePOTKRF2TRYNwqREg9lyQdZ7BEtEMk",
-    authDomain: "baseball-game-68fbb.firebaseapp.com",
-    
-    // 👇 핵심 수정: 스크린샷에는 없었지만, Realtime Database 사용을 위해 반드시 추가해야 하는 주소입니다! 👇
-    databaseURL: "https://baseball-game-68fbb-default-rtdb.firebaseio.com",
-    
-    projectId: "baseball-game-68fbb",
-    storageBucket: "baseball-game-68fbb.firebasestorage.app",
-    messagingSenderId: "188603859302",
-    appId: "1:188603859302:web:87ded952a72ed35b3088a7"
+  apiKey: "AIzaSyBjwePOTKRF2TRYNWqrEg9lyQdZ7BEtEMk",
+  authDomain: "baseball-game-68fbb.firebaseapp.com",
+  projectId: "baseball-game-68fbb",
+  storageBucket: "baseball-game-68fbb.firebasestorage.app",
+  messagingSenderId: "188603859302",
+  appId: "1:188603859302:web:87ded952a72ed35b3088a7"
 };
 
-// 파이어베이스 초기화 및 데이터베이스 연결
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 const rankRef = db.ref('leaderboard');
+
 
 // --- 1. 동적 메뉴 로직 ---
 const list = document.querySelectorAll('.list');
@@ -62,19 +58,20 @@ function shootConfetti() {
 }
 
 
-// --- 3. 타이머 및 파이어베이스 명예의 전당 로직 ---
+// --- 3. 타이머 및 파이어베이스 명예의 전당 로직 (Top 10 반영) ---
 let timerInterval;
 let elapsedTime = 0;
 let isTimerRunning = false;
 
-// 내 기록이 3등 안에 드는지 확인하기 위해 순위를 임시 저장할 배열
-let currentTop3 = []; 
+// 10등 순위를 담을 배열
+let currentTop10 = []; 
 
 const timerDisplay = document.getElementById('timer-display');
 const rankList = document.getElementById('rank-list');
 const nameModal = document.getElementById('name-modal');
 const playerNameInput = document.getElementById('player-name');
 const recordTimeDisplay = document.getElementById('record-time');
+const resetRankBtn = document.getElementById('reset-rank-btn');
 
 function updateTimerDisplay() {
     let m = Math.floor(elapsedTime / 60).toString().padStart(2, '0');
@@ -92,27 +89,37 @@ function startTimer() {
     }, 1000);
 }
 
-// ☁️ 실시간 랭킹 리스너 (누군가 기록을 깨면 내 화면도 자동으로 갱신됨!)
-rankRef.orderByChild('time').limitToFirst(3).on('value', (snapshot) => {
+// ☁️ 실시간 랭킹 (10개로 증가)
+rankRef.orderByChild('time').limitToFirst(10).on('value', (snapshot) => {
     rankList.innerHTML = '';
-    currentTop3 = [];
+    currentTop10 = [];
     
     if (!snapshot.exists()) {
         rankList.innerHTML = '<li style="justify-content:center; color:#8b949e;">아직 기록이 없습니다. 1등에 도전하세요!</li>';
         return;
     }
 
-    // 데이터를 가져와서 배열에 넣고 다시 시간순 정렬 (파이어베이스 구조상 필요)
     snapshot.forEach((childSnapshot) => {
-        currentTop3.push(childSnapshot.val());
+        currentTop10.push(childSnapshot.val());
     });
-    currentTop3.sort((a, b) => a.time - b.time);
+    currentTop10.sort((a, b) => a.time - b.time);
 
-    // 화면에 그리기
+    // 1~3등은 메달, 4~10등은 숫자로 표시
     let medals = ['🥇', '🥈', '🥉'];
-    currentTop3.forEach((record, index) => {
-        rankList.innerHTML += `<li><span>${medals[index]} ${record.name}</span> <span style="color:#ffeb3b;">${record.time}초</span></li>`;
+    currentTop10.forEach((record, index) => {
+        let rankBadge = index < 3 ? medals[index] : `<span style="display:inline-block; width:1.5em; text-align:center;">${index + 1}.</span>`;
+        rankList.innerHTML += `<li><span>${rankBadge} ${record.name}</span> <span style="color:#ffeb3b;">${record.time}초</span></li>`;
     });
+});
+
+// 🗑️ 파이어베이스 랭킹 초기화 버튼 기능
+resetRankBtn.addEventListener('click', () => {
+    // 실수로 누르는 것을 방지하기 위한 확인창
+    if (confirm("⚠️ 정말로 명예의 전당 기록을 모두 삭제하시겠습니까?\n이 작업은 복구할 수 없습니다!")) {
+        rankRef.remove()
+            .then(() => alert("랭킹이 초기화되었습니다. 새로운 시즌을 시작하세요!"))
+            .catch((error) => alert("초기화 중 오류가 발생했습니다: " + error));
+    }
 });
 
 
@@ -191,8 +198,8 @@ function playGame() {
         resultBoard.insertAdjacentHTML('beforeend', resultHTML); 
         endGame(`<div style="color:#4caf50; font-size:1.2em; font-weight:bold; margin-top:10px; text-align:center;">승리! 경과 시간: ${elapsedTime}초</div>`);
         
-        // ☁️ 파이어베이스의 기록과 비교하여 Top 3 진입 확인
-        if (currentTop3.length < 3 || elapsedTime < currentTop3[currentTop3.length - 1].time) {
+        // ☁️ Top 10 진입 확인으로 수정
+        if (currentTop10.length < 10 || elapsedTime < currentTop10[currentTop10.length - 1].time) {
             setTimeout(() => {
                 recordTimeDisplay.innerText = elapsedTime;
                 nameModal.classList.remove('hidden');
@@ -234,12 +241,7 @@ function endGame(messageHTML) {
 document.getElementById('save-name-btn').addEventListener('click', () => {
     let name = playerNameInput.value.trim().toUpperCase() || 'ANON';
     
-    // 파이어베이스 DB로 푸시!
-    rankRef.push({
-        name: name,
-        time: elapsedTime
-    });
-    
+    rankRef.push({ name: name, time: elapsedTime });
     nameModal.classList.add('hidden'); 
     playerNameInput.value = '';
 });

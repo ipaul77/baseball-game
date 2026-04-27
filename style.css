@@ -1,7 +1,6 @@
 * { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
-body { display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 100vh; background: #0d1117; gap: 30px; overflow-x: hidden; }
+body { display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 100vh; background: #0d1117; gap: 30px; overflow-x: hidden; padding: 20px 0; }
 
-/* 내비게이션 (4개 항목) */
 .navigation { width: 350px; height: 70px; background: #2b3a55; position: relative; display: flex; justify-content: center; align-items: center; z-index: 10; border-radius: 10px; }
 .navigation ul { display: flex; width: 280px; }
 .navigation ul li { position: relative; list-style: none; width: 70px; height: 70px; z-index: 1; }
@@ -17,21 +16,17 @@ body { display: flex; flex-direction: column; justify-content: center; align-ite
 .navigation ul li:nth-child(4).active ~ .indicator { transform: translateX(calc(70px * 3)); }
 .navigation.theme-purple { background: #9c27b0; }
 
-/* 게임 컨테이너 */
-.game-container { width: 420px; background: #161b22; padding: 25px; border-radius: 15px; color: white; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 5; }
+.game-container { width: 420px; background: #161b22; padding: 25px; border-radius: 15px; color: white; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 5; margin-bottom: 20px; }
 .game-container h2 { margin-bottom: 5px; font-size: 1.5em; }
 .game-container p { font-size: 0.85em; color: #8b949e; margin-bottom: 15px; }
 
-/* 타이머 디자인 */
 #timer-display { font-size: 1.8em; font-weight: bold; color: #ffeb3b; background: #0d1117; padding: 10px; border-radius: 8px; margin-bottom: 15px; letter-spacing: 2px; }
 
-/* 입력 영역 */
 .input-area { display: flex; justify-content: center; gap: 10px; margin-bottom: 15px; }
 #user-input { width: 150px; padding: 10px; font-size: 1.2em; text-align: center; border-radius: 8px; border: none; outline: none; }
 #submit-btn, #restart-btn { padding: 10px 20px; font-size: 1em; background: #9c27b0; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s; }
 #submit-btn:hover, #restart-btn:hover { background: #ba68c8; }
 
-/* 결과 보드 */
 #result-board { background: #0d1117; padding: 15px; border-radius: 8px; min-height: 120px; max-height: 180px; overflow-y: auto; text-align: left; display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px; scroll-behavior: smooth; }
 .log-entry { font-size: 0.95em; border-bottom: 1px solid #30363d; padding-bottom: 5px;}
 .attempt-count { color: #8b949e; font-weight: bold; margin-right: 8px; }
@@ -39,31 +34,27 @@ body { display: flex; flex-direction: column; justify-content: center; align-ite
 .ball { color: #ff9800; font-weight: bold; }
 .out { color: #f44336; font-weight: bold; }
 
-/* 실패 메시지 */
 .fail-message { margin-top: 10px; text-align: center; color: #f44336; animation: shake 0.5s ease-in-out; }
 .fail-message h1 { font-size: 3em; margin-bottom: 5px; text-shadow: 0 0 15px rgba(244, 67, 54, 0.6); }
 @keyframes shake { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-10px); } 40%, 80% { transform: translateX(10px); } }
 
-/* 명예의 전당 (리더보드) */
 #leaderboard { margin-top: 20px; background: #21262d; padding: 15px; border-radius: 8px; border: 1px solid #30363d; }
 #leaderboard h3 { font-size: 1em; color: #ffeb3b; margin-bottom: 10px; }
-#rank-list { list-style: none; text-align: left; padding: 0 10px; }
+#rank-list { list-style: none; text-align: left; padding: 0 10px; max-height: 250px; overflow-y: auto; } /* 10개가 넘치면 스크롤 */
 #rank-list li { display: flex; justify-content: space-between; font-size: 0.9em; padding: 5px 0; border-bottom: 1px dashed #484f58; }
 
-/* 닉네임 입력 모달창 */
+/* 🔴 기록 초기화 버튼 스타일 추가 */
+#reset-rank-btn { width: 100%; margin-top: 15px; padding: 8px; font-size: 0.85em; background: #d32f2f; color: white; border: none; border-radius: 5px; cursor: pointer; transition: 0.3s; font-weight: bold; }
+#reset-rank-btn:hover { background: #b71c1c; }
+
 .modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; z-index: 100; }
 .modal.hidden { display: none; }
 .modal-content { background: #161b22; padding: 30px; border-radius: 15px; text-align: center; color: white; width: 300px; border: 2px solid #4caf50; }
 .modal-content input { width: 100%; padding: 10px; margin: 15px 0; text-align: center; font-size: 1.2em; border-radius: 5px; outline: none; border: none; }
 .modal-content button { padding: 10px 20px; background: #4caf50; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; width: 100%; }
 
-/* 꽃가루 효과 */
 .confetti { position: fixed; top: -10px; width: 10px; height: 10px; z-index: 99; animation: fall 3s linear forwards; }
 @keyframes fall { to { transform: translateY(100vh) rotate(720deg); } }
 
-/* 모바일 최적화 */
 button, input { touch-action: manipulation; }
-@media (max-width: 450px) {
-    .navigation { transform: scale(0.85); margin-top: 10px; }
-    .game-container { width: 90%; padding: 15px; }
-}
+@media (max-width: 450px) { .navigation { transform: scale(0.85); margin-top: 10px; } .game-container { width: 90%; padding: 15px; } }

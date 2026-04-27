@@ -46,27 +46,26 @@
         <button id="restart-btn" style="display: none;">게임 다시 시작</button>
 
         <div id="leaderboard">
-            <h3>🏆 명예의 전당 (Top 3)</h3>
+            <h3>🏆 명예의 전당 (Top 10)</h3>
             <ul id="rank-list">
                 </ul>
+            <button id="reset-rank-btn">기록 초기화</button>
         </div>
     </div>
 
     <div id="name-modal" class="modal hidden">
         <div class="modal-content">
-            <h3>🎉 Top 3 달성!</h3>
+            <h3>🎉 Top 10 달성!</h3>
             <p>기록: <strong id="record-time" style="color:#4caf50;"></strong>초</p>
             <input type="text" id="player-name" placeholder="닉네임 (최대 5자)" maxlength="5">
             <button id="save-name-btn">기록 저장</button>
         </div>
     </div>
 
-<script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
+    <script type="module" src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.esm.js"></script>
     <script nomodule src="https://unpkg.com/ionicons@7.1.0/dist/ionicons/ionicons.js"></script>
-    
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
-
     <script src="script.js"></script>
 </body>
 </html>
