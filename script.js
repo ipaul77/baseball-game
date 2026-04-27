@@ -176,60 +176,140 @@ document.getElementById('home-btn').addEventListener('click', () => showScreen('
 
 
 // =======================================================================
-// ⚔️ 3. 온라인 1:1 대전 플레이 로직
+// ⚔️ 3. 온라인 1:1 대전 플레이 로직 (로비 시스템 개편!)
 // =======================================================================
 const myUid = "user_" + Math.random().toString(36).substr(2, 9);
 let currentRoomId = null, myRole = null, multiPhase = '', currentTurn = 1, oppName = "상대방";
 
+// [대전 모드 클릭] -> 로비로 이동 및 전체 방 목록 실시간 감지
 document.getElementById('btn-multi-play').addEventListener('click', () => {
-    updateNickname(); showScreen('screen-lobby'); const roomsRef = db.ref('rooms');
+    updateNickname(); 
+    showScreen('screen-lobby'); 
     
-    roomsRef.orderByChild('status').equalTo('waiting').limitToFirst(1).once('value', snapshot => {
-        if (snapshot.exists()) {
-            snapshot.forEach(child => { currentRoomId = child.key; }); myRole = 'p2';
-            roomsRef.child(currentRoomId).update({ p2: myUid, p2_name: globalNickname, status: 'playing' });
-            startMultiGame();
-        } else {
-            const newRoom = roomsRef.push(); currentRoomId = newRoom.key; myRole = 'p1';
-            newRoom.set({ status: 'waiting', p1: myUid, p1_name: globalNickname, p1_target: "", p2_target: "", turn: 1 });
-            db.ref('rooms/' + currentRoomId + '/status').on('value', snap => { if (snap.val() === 'playing' && myRole === 'p1') startMultiGame(); });
+    // 실시간 방 목록 불러오기
+    db.ref('rooms').on('value', (snap) => {
+        const listEl = document.getElementById('room-list');
+        listEl.innerHTML = '';
+        
+        if (!snap.exists()) {
+            listEl.innerHTML = '<li style="text-align:center; padding:30px 0; color:#8b949e;">현재 개설된 방이 없습니다.<br>새로운 방을 만들어보세요!</li>';
+            return;
         }
+
+        snap.forEach(child => {
+            const room = child.val();
+            const roomId = child.key;
+            const isWaiting = room.status === 'waiting';
+            
+            // 상태에 따른 텍스트와 클래스 결정
+            const statusText = isWaiting ? '🟢 대기 중 (1/2)' : '🔴 게임 중 (2/2)';
+            const statusClass = isWaiting ? 'status-waiting' : 'status-playing';
+            const itemClass = isWaiting ? 'waiting' : 'playing';
+
+            const li = document.createElement('li');
+            li.className = `room-item ${itemClass}`;
+            li.innerHTML = `
+                <span class="room-title">${room.p1_name}님의 방</span>
+                <span class="room-status ${statusClass}">${statusText}</span>
+            `;
+
+            // 대기 중인 방만 클릭해서 난입 가능!
+            if (isWaiting) {
+                li.addEventListener('click', () => joinRoom(roomId));
+            }
+            listEl.appendChild(li);
+        });
     });
 });
 
-document.getElementById('btn-cancel-match').addEventListener('click', () => {
-    if (currentRoomId && myRole === 'p1') db.ref('rooms/' + currentRoomId).remove();
-    currentRoomId = null; showScreen('screen-mode-select');
+// [대기실 나가기] -> 홈으로
+document.getElementById('btn-leave-lobby').addEventListener('click', () => {
+    db.ref('rooms').off(); // 방 목록 새로고침 끄기
+    showScreen('screen-mode-select');
 });
 
-function startMultiGame() {
-    showScreen('screen-multi'); document.getElementById('multi-result-board').innerHTML = '';
-    document.getElementById('multi-exit-btn').style.display = 'none'; document.getElementById('multi-input').disabled = false;
-    document.getElementById('multi-submit-btn').disabled = false; document.getElementById('multi-input').value = '';
+// [방 만들기] -> 내가 P1이 됨
+document.getElementById('btn-create-room').addEventListener('click', () => {
+    db.ref('rooms').off(); // 방 목록 새로고침 끄기
     
-    // 🔒 내 비밀 숫자 박스 초기화
+    const newRoom = db.ref('rooms').push();
+    currentRoomId = newRoom.key;
+    myRole = 'p1';
+    
+    newRoom.set({
+        status: 'waiting',
+        p1: myUid,
+        p1_name: globalNickname,
+        p1_target: "", p2_target: "", turn: 1
+    });
+    
+    enterMultiRoom(); // 방 안으로 이동
+});
+
+// [방 참가하기] -> 목록에서 방을 클릭했을 때 (내가 P2가 됨)
+function joinRoom(roomId) {
+    db.ref('rooms').off(); // 방 목록 새로고침 끄기
+    
+    currentRoomId = roomId;
+    myRole = 'p2';
+    
+    db.ref('rooms/' + roomId).update({
+        p2: myUid,
+        p2_name: globalNickname,
+        status: 'playing' // 내가 들어갔으니 게임 중으로 상태 변경!
+    });
+    
+    enterMultiRoom(); // 방 안으로 이동
+}
+
+// [공통] 방 안으로 이동 및 게임 진행 로직
+function enterMultiRoom() {
+    showScreen('screen-multi'); 
+    document.getElementById('multi-result-board').innerHTML = '';
+    document.getElementById('multi-exit-btn').style.display = 'none';
+    
+    // 혼자 방에 들어왔을 때 입력창 막아두기
+    document.getElementById('multi-input').disabled = true;
+    document.getElementById('multi-submit-btn').disabled = true;
+    document.getElementById('multi-input').value = '';
+    
     document.getElementById('my-secret-box').classList.add('hidden');
     document.getElementById('my-secret-number').innerText = '';
 
-    multiPhase = 'setting'; currentTurn = 1;
-    document.getElementById('multi-status-msg').innerText = "⚔️ 매칭 성공! 상대가 맞출 내 숫자를 설정하세요.";
+    multiPhase = 'waiting_player'; // 신규 상태: 상대방 기다리는 중
+    currentTurn = 1;
+    
     document.getElementById('multi-my-name').innerText = globalNickname;
+    document.getElementById('multi-opp-name').innerText = "대기 중...";
+    document.getElementById('multi-status-msg').innerText = "⏳ 상대방이 들어오기를 기다리는 중입니다...";
 
+    // 방 내부 실시간 감지
     db.ref('rooms/' + currentRoomId).on('value', snap => {
         const rData = snap.val(); if (!rData) return;
         
-        if (myRole === 'p1' && rData.p2_name) oppName = rData.p2_name;
-        if (myRole === 'p2' && rData.p1_name) oppName = rData.p1_name;
-        document.getElementById('multi-opp-name').innerText = oppName;
+        if (rData.status === 'abandoned') { alert(`⚠️ 상대방이 나갔습니다. 방이 폭파됩니다.`); leaveMultiGame(); return; }
 
-        if (rData.status === 'abandoned') { alert(`⚠️ [${oppName}] 님이 도망갔습니다.`); leaveMultiGame(); return; }
+        // 누군가(p2) 들어와서 상태가 playing이 되었을 때!
+        if (multiPhase === 'waiting_player' && rData.status === 'playing') {
+            multiPhase = 'setting';
+            if (myRole === 'p1') oppName = rData.p2_name || "상대방";
+            if (myRole === 'p2') oppName = rData.p1_name || "상대방";
+            
+            document.getElementById('multi-opp-name').innerText = oppName;
+            document.getElementById('multi-status-msg').innerText = "⚔️ 매칭 성공! 상대가 맞출 내 비밀 숫자를 설정하세요.";
+            document.getElementById('multi-input').disabled = false;
+            document.getElementById('multi-submit-btn').disabled = false;
+        }
 
+        // 서로 타겟 숫자를 설정 완료했을 때
         if (multiPhase === 'setting' && rData.p1_target !== "" && rData.p2_target !== "") {
             multiPhase = 'playing';
             document.getElementById('multi-status-msg').innerText = `🔥 전투 시작! [1턴] ${oppName}의 숫자를 맞춰보세요!`;
-            document.getElementById('multi-input').disabled = false; document.getElementById('multi-submit-btn').disabled = false;
+            document.getElementById('multi-input').disabled = false; 
+            document.getElementById('multi-submit-btn').disabled = false;
         }
 
+        // 전투 진행 중
         if (multiPhase === 'playing') {
             const tData = rData.guesses ? rData.guesses[currentTurn] : null;
             if (tData && tData.p1 && tData.p2) {
@@ -248,15 +328,14 @@ document.getElementById('multi-submit-btn').addEventListener('click', () => {
     const val = document.getElementById('multi-input').value;
     if (val.length !== 3 || isNaN(val) || new Set(val.split('')).size !== 3) { alert("중복 없는 3자리 숫자를 입력하세요!"); return; }
 
-    document.getElementById('multi-input').value = ''; document.getElementById('multi-input').disabled = true; document.getElementById('multi-submit-btn').disabled = true;
+    document.getElementById('multi-input').value = ''; 
+    document.getElementById('multi-input').disabled = true; 
+    document.getElementById('multi-submit-btn').disabled = true;
 
     if (multiPhase === 'setting') {
         document.getElementById('multi-status-msg').innerText = "⏳ 상대방 설정을 기다리는 중...";
-        
-        // 🔒 내가 설정한 비밀 숫자를 화면 상단에 표시
         document.getElementById('my-secret-number').innerText = val;
         document.getElementById('my-secret-box').classList.remove('hidden');
-
         const updates = {}; updates[myRole + '_target'] = val; db.ref('rooms/' + currentRoomId).update(updates);
     } else if (multiPhase === 'playing') {
         document.getElementById('multi-status-msg').innerText = "⏳ 상대방 공격을 기다리는 중...";
@@ -319,5 +398,6 @@ function finishMultiGame(msg, oppTarget) {
 document.getElementById('multi-exit-btn').addEventListener('click', leaveMultiGame);
 function leaveMultiGame() {
     if (currentRoomId) { db.ref('rooms/' + currentRoomId).update({status: 'abandoned'}); db.ref('rooms/' + currentRoomId).off(); }
-    currentRoomId = null; showScreen('screen-mode-select');
+    currentRoomId = null; 
+    document.getElementById('btn-multi-play').click(); // 방에서 나가면 다시 대기실 로비로 이동!
 }
