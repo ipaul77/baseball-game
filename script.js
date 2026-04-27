@@ -74,11 +74,30 @@ db.ref('leaderboard/' + seasonData.prev).orderByChild('time').limitToFirst(1).on
 });
 
 let currentTop10 = [];
-rankRef.orderByChild('time').limitToFirst(10).on('value', (snap) => {
-    let list = document.getElementById('rank-list'); list.innerHTML = ''; currentTop10 = [];
-    if (!snap.exists()) { list.innerHTML = '<li style="justify-content:center; color:#8b949e;">시즌이 시작되었습니다! 첫 기록을 남겨보세요.</li>'; return; }
-    snap.forEach(c => currentTop10.push(c.val())); currentTop10.sort((a,b)=>a.time-b.time);
-    currentTop10.forEach((r, i) => list.innerHTML += `<li><span>${i<3 ? ['🥇','🥈','🥉'][i] : (i+1)+'.'} ${r.name}</span> <span style="color:#ffeb3b;">${r.time}초</span></li>`);
+// 🏆 실시간 랭킹 가져오기 (다수 인원 표시 보강)
+rankRef.orderByChild('time').limitToFirst(10).on('value', (snapshot) => {
+    const list = document.getElementById('rank-list');
+    list.innerHTML = '';
+    currentTop10 = [];
+
+    if (!snapshot.exists()) {
+        list.innerHTML = '<li style="justify-content:center; color:#8b949e; text-align:center; padding:15px 0;">시즌이 시작되었습니다!<br>첫 기록을 남겨보세요!</li>';
+        return;
+    }
+
+    snapshot.forEach((childSnapshot) => {
+        currentTop10.push(childSnapshot.val());
+    });
+    currentTop10.sort((a, b) => a.time - b.time);
+
+    let listHTML = '';
+    const medals = ['🥇', '🥈', '🥉'];
+    currentTop10.forEach((record, index) => {
+        const rankBadge = index < 3 ? medals[index] : `<span style="display:inline-block; width:1.5em; text-align:center;">${index + 1}.</span>`;
+        listHTML += `<li><span>${rankBadge} ${record.name}</span> <span style="color:#ffeb3b;">${record.time}초</span></li>`;
+    });
+    list.innerHTML = listHTML;
+    console.log(`현재 시즌(${seasonData.current}) 리더보드 동기화 됨: ${currentTop10.length}명`);
 });
 
 let targetNumbers=[], attempts=0, MAX_ATTEMPTS=8, timerInterval, elapsedTime=0, isTimerRunning=false, hintUsed=false;
@@ -87,7 +106,7 @@ function initSingleGame() {
     clearInterval(timerInterval); document.getElementById('timer-display').innerText="⏱ 00:00"; document.getElementById('timer-display').style.color="#ffeb3b";
     document.getElementById('result-board').innerHTML=''; document.getElementById('submit-btn').disabled=false; document.getElementById('user-input').disabled=false;
     
-    // 🔄 게임 시작 시 버튼 숨기기
+    // 🔄 게임 시작 시 종료 버튼 2개 숨기기
     document.getElementById('single-end-btns').style.display='none';
     
     let nums=[0,1,2,3,4,5,6,7,8,9]; for(let i=0; i<3; i++) targetNumbers.push(nums.splice(Math.floor(Math.random()*nums.length), 1)[0]);
@@ -129,7 +148,7 @@ function playSingle() {
 
     if(s===3) {
         document.getElementById('submit-btn').disabled=true; document.getElementById('user-input').disabled=true; 
-        document.getElementById('single-end-btns').style.display="flex"; // 🔄 정답 시 버튼 2개 보이기
+        document.getElementById('single-end-btns').style.display="flex"; // 🔄 정답 시 버튼 보이기
         
         if(currentTop10.length<10 || elapsedTime < currentTop10[currentTop10.length-1].time) {
             setTimeout(()=> { document.getElementById('record-time').innerText=elapsedTime; document.getElementById('name-modal').classList.remove('hidden'); }, 1000);
@@ -138,7 +157,7 @@ function playSingle() {
         clearInterval(timerInterval); playSound(outSound); pEff.innerText="실패!"; pEff.style.color="#ef5350";
         rb.insertAdjacentHTML('beforeend', `<div class="fail-message"><h1>실패!</h1><p>정답: <strong>[ ${targetNumbers.join('')} ]</strong></p></div>`);
         document.getElementById('submit-btn').disabled=true; document.getElementById('user-input').disabled=true; 
-        document.getElementById('single-end-btns').style.display="flex"; // 🔄 실패 시 버튼 2개 보이기
+        document.getElementById('single-end-btns').style.display="flex"; // 🔄 실패 시 버튼 보이기
         rb.scrollTop=rb.scrollHeight;
     } else { s===0&&b===0 ? playSound(outSound) : playSound(strikeSound); }
     document.getElementById('user-input').value=''; document.getElementById('user-input').focus();
@@ -150,7 +169,7 @@ document.getElementById('save-name-btn').addEventListener('click', () => {
     document.getElementById('name-modal').classList.add('hidden');
 });
 
-// 🔄 버튼 이벤트 연결 (다시하기 / 메인으로)
+// 🔄 버튼 이벤트 연결
 document.getElementById('btn-single-play').addEventListener('click', () => { updateNickname(); showScreen('screen-single'); initSingleGame(); });
 document.getElementById('retry-btn').addEventListener('click', initSingleGame);
 document.getElementById('home-btn').addEventListener('click', () => showScreen('screen-mode-select'));
@@ -188,6 +207,7 @@ function startMultiGame() {
     document.getElementById('multi-exit-btn').style.display = 'none'; document.getElementById('multi-input').disabled = false;
     document.getElementById('multi-submit-btn').disabled = false; document.getElementById('multi-input').value = '';
     
+    // 🔒 내 비밀 숫자 박스 초기화
     document.getElementById('my-secret-box').classList.add('hidden');
     document.getElementById('my-secret-number').innerText = '';
 
@@ -233,6 +253,7 @@ document.getElementById('multi-submit-btn').addEventListener('click', () => {
     if (multiPhase === 'setting') {
         document.getElementById('multi-status-msg').innerText = "⏳ 상대방 설정을 기다리는 중...";
         
+        // 🔒 내가 설정한 비밀 숫자를 화면 상단에 표시
         document.getElementById('my-secret-number').innerText = val;
         document.getElementById('my-secret-box').classList.remove('hidden');
 
