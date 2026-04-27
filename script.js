@@ -1,33 +1,78 @@
-// --- ☁️ 0. Firebase 데이터베이스 설정 (본인 키 필수 입력!) ---
+// --- ☁️ 0. Firebase 데이터베이스 설정 (본인 키와 databaseURL 필수 입력!) ---
 const firebaseConfig = {
-  apiKey: "AIzaSyBjwePOTKRF2TRYNWqrEg9lyQdZ7BEtEMk",
-  authDomain: "baseball-game-68fbb.firebaseapp.com",
-  projectId: "baseball-game-68fbb",
-  storageBucket: "baseball-game-68fbb.firebasestorage.app",
-  messagingSenderId: "188603859302",
-  appId: "1:188603859302:web:87ded952a72ed35b3088a7"
+    apiKey: "본인의 API 키를 여기에 붙여넣으세요",
+    authDomain: "본인의 프로젝트명.firebaseapp.com",
+    databaseURL: "https://본인의-데이터베이스-주소.firebaseio.com",
+    projectId: "본인의 프로젝트명",
+    storageBucket: "본인의 프로젝트명.appspot.com",
+    messagingSenderId: "숫자",
+    appId: "본인의 앱 ID"
 };
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
 
-// --- 📅 [신규] 3일 주기 시즌제(자동 리셋) 로직 ---
-// 1970년부터 지금까지의 시간을 계산해 3일 단위로 고유한 시즌 ID를 반환합니다.
-function getCurrentSeasonId() {
-    const threeDaysInMs = 3 * 24 * 60 * 60 * 1000; // 3일을 밀리초(ms)로 환산
+// --- 📅 1. 3일 주기 시즌제 및 남은 시간 카운트다운 로직 ---
+const threeDaysInMs = 3 * 24 * 60 * 60 * 1000; // 3일 = 밀리초
+
+// 현재 시즌 번호와 다음 시즌 초기화 시간 계산
+function getSeasonData() {
     const currentMs = Date.now();
     const seasonNumber = Math.floor(currentMs / threeDaysInMs);
-    return "season_" + seasonNumber; 
+    const nextSeasonMs = (seasonNumber + 1) * threeDaysInMs;
+    return {
+        current: "season_" + seasonNumber,
+        prev: "season_" + (seasonNumber - 1),
+        nextTime: nextSeasonMs
+    };
 }
 
-const currentSeason = getCurrentSeasonId();
-// 파이어베이스 경로를 'leaderboard/현재시즌' 으로 설정하여, 
-// 3일이 지나면 자동으로 새로운 텅 빈 저장소를 바라보게 만듭니다.
-const rankRef = db.ref('leaderboard/' + currentSeason);
+const seasonData = getSeasonData();
+const rankRef = db.ref('leaderboard/' + seasonData.current); // 이번 시즌 DB 연결
+
+// 카운트다운 타이머 (1초마다 실행)
+function updateSeasonCountdown() {
+    const now = Date.now();
+    const diff = seasonData.nextTime - now;
+
+    // 만약 타이머가 다 지나서 새로운 시즌이 되었다면 브라우저 새로고침!
+    if (diff <= 0) {
+        location.reload(); 
+        return;
+    }
+
+    // 남은 밀리초를 일, 시간, 분, 초로 예쁘게 변환
+    const d = Math.floor(diff / (1000 * 60 * 60 * 24));
+    const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
+    const m = Math.floor((diff / 1000 / 60) % 60);
+    const s = Math.floor((diff / 1000) % 60);
+
+    document.getElementById('season-countdown').innerText = `⏳ 초기화까지: ${d}일 ${h}시간 ${m}분 ${s}초 남음`;
+}
+setInterval(updateSeasonCountdown, 1000);
+updateSeasonCountdown(); // 화면 켜자마자 바로 1번 실행
 
 
-// --- 1. 동적 메뉴 로직 ---
+// --- 👑 지난 시즌 1등 기록 불러오기 (1회성 읽기) ---
+db.ref('leaderboard/' + seasonData.prev)
+  .orderByChild('time')
+  .limitToFirst(1)
+  .once('value')
+  .then((snapshot) => {
+    const prevWinnerEl = document.getElementById('prev-winner');
+    if (snapshot.exists()) {
+        let winner = null;
+        // 1개만 가져왔지만 파이어베이스 구조상 forEach로 까봐야 함
+        snapshot.forEach(child => { winner = child.val(); });
+        prevWinnerEl.innerHTML = `👑 지난 시즌 1등: <strong>${winner.name}</strong> (${winner.time}초)`;
+    } else {
+        prevWinnerEl.innerHTML = `👑 지난 시즌: 아쉽게도 기록이 없습니다.`;
+    }
+});
+
+
+// --- 2. 동적 메뉴 로직 ---
 const list = document.querySelectorAll('.list');
 let isSoundOn = true; 
 
@@ -48,7 +93,7 @@ function activeLink() {
 list.forEach((item) => item.addEventListener('click', activeLink));
 
 
-// --- 2. 사운드 및 꽃가루 효과 ---
+// --- 3. 사운드 및 꽃가루 효과 ---
 const outSound = new Audio('out.mp3');
 const winSound = new Audio('win.mp3');
 const strikeSound = new Audio('strike.mp3');
@@ -72,7 +117,7 @@ function shootConfetti() {
 }
 
 
-// --- 3. 타이머 및 파이어베이스 명예의 전당 로직 (Top 10 반영) ---
+// --- 4. 타이머 및 파이어베이스 명예의 전당 (현재 시즌 실시간 업데이트) ---
 let timerInterval;
 let elapsedTime = 0;
 let isTimerRunning = false;
@@ -100,14 +145,13 @@ function startTimer() {
     }, 1000);
 }
 
-// ☁️ 실시간 랭킹 (해당 시즌의 기록만 불러옵니다)
+// 실시간 랭킹 가져오기
 rankRef.orderByChild('time').limitToFirst(10).on('value', (snapshot) => {
     rankList.innerHTML = '';
     currentTop10 = [];
     
     if (!snapshot.exists()) {
-        // 시즌이 초기화되어 기록이 없으면 아래 문구를 띄웁니다.
-        rankList.innerHTML = '<li style="justify-content:center; color:#8b949e;">새로운 시즌이 시작되었습니다!<br>1등에 도전하세요!</li>';
+        rankList.innerHTML = '<li style="justify-content:center; color:#8b949e; text-align:center; padding:15px 0;">새로운 시즌이 시작되었습니다!<br>지금 당장 1등에 도전하세요!</li>';
         return;
     }
 
@@ -124,7 +168,7 @@ rankRef.orderByChild('time').limitToFirst(10).on('value', (snapshot) => {
 });
 
 
-// --- 4. 숫자 야구 게임 핵심 로직 ---
+// --- 5. 숫자 야구 게임 핵심 로직 ---
 let targetNumbers = [];
 let attempts = 0;
 const MAX_ATTEMPTS = 8; 
@@ -199,6 +243,7 @@ function playGame() {
         resultBoard.insertAdjacentHTML('beforeend', resultHTML); 
         endGame(`<div style="color:#4caf50; font-size:1.2em; font-weight:bold; margin-top:10px; text-align:center;">승리! 경과 시간: ${elapsedTime}초</div>`);
         
+        // 현재 시즌 Top 10 확인
         if (currentTop10.length < 10 || elapsedTime < currentTop10[currentTop10.length - 1].time) {
             setTimeout(() => {
                 recordTimeDisplay.innerText = elapsedTime;
@@ -237,11 +282,8 @@ function endGame(messageHTML) {
     resultBoard.scrollTop = resultBoard.scrollHeight; 
 }
 
-// ☁️ 닉네임을 파이어베이스 서버에 저장
 document.getElementById('save-name-btn').addEventListener('click', () => {
     let name = playerNameInput.value.trim().toUpperCase() || 'ANON';
-    
-    // 현재 진행 중인 시즌의 방에 기록을 저장합니다.
     rankRef.push({ name: name, time: elapsedTime });
     nameModal.classList.add('hidden'); 
     playerNameInput.value = '';
