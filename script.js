@@ -13,11 +13,10 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-// 글로벌 닉네임 변수
 let globalNickname = "익명";
 
 // =======================================================================
-// 📺 1. 화면 전환 로직
+// 📺 1. 화면 전환 및 공통 로직
 // =======================================================================
 function showScreen(screenId) {
     document.querySelectorAll('.game-container').forEach(el => {
@@ -51,11 +50,10 @@ function shootConfetti() {
     }
 }
 
-// 닉네임 가져오기 (게임 시작 시 호출)
 function updateNickname() {
     let inputName = document.getElementById('global-nickname').value.trim();
     globalNickname = inputName || "익명";
-    document.getElementById('player-name').value = globalNickname; // 싱글 모달창 미리 채우기
+    document.getElementById('player-name').value = globalNickname;
 }
 
 // =======================================================================
@@ -88,7 +86,10 @@ function initSingleGame() {
     targetNumbers=[]; attempts=0; elapsedTime=0; isTimerRunning=false; hintUsed=false;
     clearInterval(timerInterval); document.getElementById('timer-display').innerText="⏱ 00:00"; document.getElementById('timer-display').style.color="#ffeb3b";
     document.getElementById('result-board').innerHTML=''; document.getElementById('submit-btn').disabled=false; document.getElementById('user-input').disabled=false;
-    document.getElementById('restart-btn').style.display='none';
+    
+    // 🔄 게임 시작 시 버튼 숨기기
+    document.getElementById('single-end-btns').style.display='none';
+    
     let nums=[0,1,2,3,4,5,6,7,8,9]; for(let i=0; i<3; i++) targetNumbers.push(nums.splice(Math.floor(Math.random()*nums.length), 1)[0]);
 }
 
@@ -127,14 +128,18 @@ function playSingle() {
     let rb = document.getElementById('result-board'); rb.insertAdjacentHTML('beforeend', resHTML); rb.scrollTop=rb.scrollHeight;
 
     if(s===3) {
-        document.getElementById('submit-btn').disabled=true; document.getElementById('user-input').disabled=true; document.getElementById('restart-btn').style.display="inline-block";
+        document.getElementById('submit-btn').disabled=true; document.getElementById('user-input').disabled=true; 
+        document.getElementById('single-end-btns').style.display="flex"; // 🔄 정답 시 버튼 2개 보이기
+        
         if(currentTop10.length<10 || elapsedTime < currentTop10[currentTop10.length-1].time) {
             setTimeout(()=> { document.getElementById('record-time').innerText=elapsedTime; document.getElementById('name-modal').classList.remove('hidden'); }, 1000);
         }
     } else if(attempts>=MAX_ATTEMPTS) {
         clearInterval(timerInterval); playSound(outSound); pEff.innerText="실패!"; pEff.style.color="#ef5350";
         rb.insertAdjacentHTML('beforeend', `<div class="fail-message"><h1>실패!</h1><p>정답: <strong>[ ${targetNumbers.join('')} ]</strong></p></div>`);
-        document.getElementById('submit-btn').disabled=true; document.getElementById('user-input').disabled=true; document.getElementById('restart-btn').style.display="inline-block"; rb.scrollTop=rb.scrollHeight;
+        document.getElementById('submit-btn').disabled=true; document.getElementById('user-input').disabled=true; 
+        document.getElementById('single-end-btns').style.display="flex"; // 🔄 실패 시 버튼 2개 보이기
+        rb.scrollTop=rb.scrollHeight;
     } else { s===0&&b===0 ? playSound(outSound) : playSound(strikeSound); }
     document.getElementById('user-input').value=''; document.getElementById('user-input').focus();
 }
@@ -145,8 +150,11 @@ document.getElementById('save-name-btn').addEventListener('click', () => {
     document.getElementById('name-modal').classList.add('hidden');
 });
 
+// 🔄 버튼 이벤트 연결 (다시하기 / 메인으로)
 document.getElementById('btn-single-play').addEventListener('click', () => { updateNickname(); showScreen('screen-single'); initSingleGame(); });
-document.getElementById('restart-btn').addEventListener('click', () => { showScreen('screen-mode-select'); });
+document.getElementById('retry-btn').addEventListener('click', initSingleGame);
+document.getElementById('home-btn').addEventListener('click', () => showScreen('screen-mode-select'));
+
 
 // =======================================================================
 // ⚔️ 3. 온라인 1:1 대전 플레이 로직
@@ -180,7 +188,6 @@ function startMultiGame() {
     document.getElementById('multi-exit-btn').style.display = 'none'; document.getElementById('multi-input').disabled = false;
     document.getElementById('multi-submit-btn').disabled = false; document.getElementById('multi-input').value = '';
     
-    // 🔒 신규: 게임 시작 시 내 비밀 숫자 박스 초기화 및 숨기기
     document.getElementById('my-secret-box').classList.add('hidden');
     document.getElementById('my-secret-number').innerText = '';
 
@@ -226,7 +233,6 @@ document.getElementById('multi-submit-btn').addEventListener('click', () => {
     if (multiPhase === 'setting') {
         document.getElementById('multi-status-msg').innerText = "⏳ 상대방 설정을 기다리는 중...";
         
-        // 🔒 신규: 내가 설정한 숫자를 화면에 표시하고 박스를 보여줌!
         document.getElementById('my-secret-number').innerText = val;
         document.getElementById('my-secret-box').classList.remove('hidden');
 
