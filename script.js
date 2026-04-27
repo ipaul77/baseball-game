@@ -1,4 +1,4 @@
-// --- ☁️ 0. Firebase 데이터베이스 설정 (본인 키와 databaseURL 필수 입력!) ---
+// --- ☁️ 0. Firebase 데이터베이스 설정 (본인 키 필수 입력!) ---
 const firebaseConfig = {
   apiKey: "AIzaSyBjwePOTKRF2TRYNWqrEg9lyQdZ7BEtEMk",
   authDomain: "baseball-game-68fbb.firebaseapp.com",
@@ -10,7 +10,21 @@ const firebaseConfig = {
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
-const rankRef = db.ref('leaderboard');
+
+
+// --- 📅 [신규] 3일 주기 시즌제(자동 리셋) 로직 ---
+// 1970년부터 지금까지의 시간을 계산해 3일 단위로 고유한 시즌 ID를 반환합니다.
+function getCurrentSeasonId() {
+    const threeDaysInMs = 3 * 24 * 60 * 60 * 1000; // 3일을 밀리초(ms)로 환산
+    const currentMs = Date.now();
+    const seasonNumber = Math.floor(currentMs / threeDaysInMs);
+    return "season_" + seasonNumber; 
+}
+
+const currentSeason = getCurrentSeasonId();
+// 파이어베이스 경로를 'leaderboard/현재시즌' 으로 설정하여, 
+// 3일이 지나면 자동으로 새로운 텅 빈 저장소를 바라보게 만듭니다.
+const rankRef = db.ref('leaderboard/' + currentSeason);
 
 
 // --- 1. 동적 메뉴 로직 ---
@@ -23,7 +37,7 @@ function activeLink() {
 
     const menuId = this.id;
     if (menuId === 'menu-help') {
-        alert("⚾ 게임 규칙\n\n1. 컴퓨터의 3자리 숫자 맞추기!\n2. 8번의 기회 제한\n- 스트라이크: 숫자&위치 맞음\n- 볼: 숫자만 맞음\n\n⏱ 첫 숫자 입력 시 타이머 시작!\n💡 힌트 사용 시 시간에 +15초 페널티!");
+        alert("⚾ 게임 규칙\n\n1. 컴퓨터의 3자리 숫자 맞추기!\n2. 8번의 기회 제한\n- 스트라이크: 숫자&위치 맞음\n- 볼: 숫자만 맞음\n\n⏱ 첫 숫자 입력 시 타이머 시작!\n💡 힌트 사용 시 시간에 +15초 페널티!\n🏆 랭킹은 3일마다 자동으로 초기화됩니다!");
     } else if (menuId === 'menu-sound') {
         isSoundOn = !isSoundOn;
         document.getElementById('sound-icon-svg').setAttribute('name', isSoundOn ? 'volume-high-outline' : 'volume-mute-outline');
@@ -62,8 +76,6 @@ function shootConfetti() {
 let timerInterval;
 let elapsedTime = 0;
 let isTimerRunning = false;
-
-// 10등 순위를 담을 배열
 let currentTop10 = []; 
 
 const timerDisplay = document.getElementById('timer-display');
@@ -71,7 +83,6 @@ const rankList = document.getElementById('rank-list');
 const nameModal = document.getElementById('name-modal');
 const playerNameInput = document.getElementById('player-name');
 const recordTimeDisplay = document.getElementById('record-time');
-const resetRankBtn = document.getElementById('reset-rank-btn');
 
 function updateTimerDisplay() {
     let m = Math.floor(elapsedTime / 60).toString().padStart(2, '0');
@@ -89,13 +100,14 @@ function startTimer() {
     }, 1000);
 }
 
-// ☁️ 실시간 랭킹 (10개로 증가)
+// ☁️ 실시간 랭킹 (해당 시즌의 기록만 불러옵니다)
 rankRef.orderByChild('time').limitToFirst(10).on('value', (snapshot) => {
     rankList.innerHTML = '';
     currentTop10 = [];
     
     if (!snapshot.exists()) {
-        rankList.innerHTML = '<li style="justify-content:center; color:#8b949e;">아직 기록이 없습니다. 1등에 도전하세요!</li>';
+        // 시즌이 초기화되어 기록이 없으면 아래 문구를 띄웁니다.
+        rankList.innerHTML = '<li style="justify-content:center; color:#8b949e;">새로운 시즌이 시작되었습니다!<br>1등에 도전하세요!</li>';
         return;
     }
 
@@ -104,22 +116,11 @@ rankRef.orderByChild('time').limitToFirst(10).on('value', (snapshot) => {
     });
     currentTop10.sort((a, b) => a.time - b.time);
 
-    // 1~3등은 메달, 4~10등은 숫자로 표시
     let medals = ['🥇', '🥈', '🥉'];
     currentTop10.forEach((record, index) => {
         let rankBadge = index < 3 ? medals[index] : `<span style="display:inline-block; width:1.5em; text-align:center;">${index + 1}.</span>`;
         rankList.innerHTML += `<li><span>${rankBadge} ${record.name}</span> <span style="color:#ffeb3b;">${record.time}초</span></li>`;
     });
-});
-
-// 🗑️ 파이어베이스 랭킹 초기화 버튼 기능
-resetRankBtn.addEventListener('click', () => {
-    // 실수로 누르는 것을 방지하기 위한 확인창
-    if (confirm("⚠️ 정말로 명예의 전당 기록을 모두 삭제하시겠습니까?\n이 작업은 복구할 수 없습니다!")) {
-        rankRef.remove()
-            .then(() => alert("랭킹이 초기화되었습니다. 새로운 시즌을 시작하세요!"))
-            .catch((error) => alert("초기화 중 오류가 발생했습니다: " + error));
-    }
 });
 
 
@@ -198,7 +199,6 @@ function playGame() {
         resultBoard.insertAdjacentHTML('beforeend', resultHTML); 
         endGame(`<div style="color:#4caf50; font-size:1.2em; font-weight:bold; margin-top:10px; text-align:center;">승리! 경과 시간: ${elapsedTime}초</div>`);
         
-        // ☁️ Top 10 진입 확인으로 수정
         if (currentTop10.length < 10 || elapsedTime < currentTop10[currentTop10.length - 1].time) {
             setTimeout(() => {
                 recordTimeDisplay.innerText = elapsedTime;
@@ -241,6 +241,7 @@ function endGame(messageHTML) {
 document.getElementById('save-name-btn').addEventListener('click', () => {
     let name = playerNameInput.value.trim().toUpperCase() || 'ANON';
     
+    // 현재 진행 중인 시즌의 방에 기록을 저장합니다.
     rankRef.push({ name: name, time: elapsedTime });
     nameModal.classList.add('hidden'); 
     playerNameInput.value = '';
