@@ -74,30 +74,17 @@ db.ref('leaderboard/' + seasonData.prev).orderByChild('time').limitToFirst(1).on
 });
 
 let currentTop10 = [];
-// 🏆 실시간 랭킹 가져오기 (다수 인원 표시 보강)
 rankRef.orderByChild('time').limitToFirst(10).on('value', (snapshot) => {
-    const list = document.getElementById('rank-list');
-    list.innerHTML = '';
-    currentTop10 = [];
-
-    if (!snapshot.exists()) {
-        list.innerHTML = '<li style="justify-content:center; color:#8b949e; text-align:center; padding:15px 0;">시즌이 시작되었습니다!<br>첫 기록을 남겨보세요!</li>';
-        return;
-    }
-
-    snapshot.forEach((childSnapshot) => {
-        currentTop10.push(childSnapshot.val());
-    });
+    const list = document.getElementById('rank-list'); list.innerHTML = ''; currentTop10 = [];
+    if (!snapshot.exists()) { list.innerHTML = '<li style="justify-content:center; color:#8b949e; text-align:center; padding:15px 0;">시즌이 시작되었습니다!<br>첫 기록을 남겨보세요!</li>'; return; }
+    snapshot.forEach((childSnapshot) => { currentTop10.push(childSnapshot.val()); });
     currentTop10.sort((a, b) => a.time - b.time);
-
-    let listHTML = '';
-    const medals = ['🥇', '🥈', '🥉'];
+    let listHTML = ''; const medals = ['🥇', '🥈', '🥉'];
     currentTop10.forEach((record, index) => {
         const rankBadge = index < 3 ? medals[index] : `<span style="display:inline-block; width:1.5em; text-align:center;">${index + 1}.</span>`;
         listHTML += `<li><span>${rankBadge} ${record.name}</span> <span style="color:#ffeb3b;">${record.time}초</span></li>`;
     });
     list.innerHTML = listHTML;
-    console.log(`현재 시즌(${seasonData.current}) 리더보드 동기화 됨: ${currentTop10.length}명`);
 });
 
 let targetNumbers=[], attempts=0, MAX_ATTEMPTS=8, timerInterval, elapsedTime=0, isTimerRunning=false, hintUsed=false;
@@ -105,17 +92,13 @@ function initSingleGame() {
     targetNumbers=[]; attempts=0; elapsedTime=0; isTimerRunning=false; hintUsed=false;
     clearInterval(timerInterval); document.getElementById('timer-display').innerText="⏱ 00:00"; document.getElementById('timer-display').style.color="#ffeb3b";
     document.getElementById('result-board').innerHTML=''; document.getElementById('submit-btn').disabled=false; document.getElementById('user-input').disabled=false;
-    
-    // 🔄 게임 시작 시 종료 버튼 2개 숨기기
     document.getElementById('single-end-btns').style.display='none';
-    
     let nums=[0,1,2,3,4,5,6,7,8,9]; for(let i=0; i<3; i++) targetNumbers.push(nums.splice(Math.floor(Math.random()*nums.length), 1)[0]);
 }
 
 function useHint() {
     if(attempts===0 || hintUsed) return;
-    alert(`💡 힌트: 정답에 [ ${targetNumbers[Math.floor(Math.random()*3)]} ] 가 포함됨! (+15초)`);
-    elapsedTime+=15; hintUsed=true;
+    alert(`💡 힌트: 정답에 [ ${targetNumbers[Math.floor(Math.random()*3)]} ] 가 포함됨! (+15초)`); elapsedTime+=15; hintUsed=true;
 }
 
 document.getElementById('user-input').addEventListener('input', () => {
@@ -148,8 +131,7 @@ function playSingle() {
 
     if(s===3) {
         document.getElementById('submit-btn').disabled=true; document.getElementById('user-input').disabled=true; 
-        document.getElementById('single-end-btns').style.display="flex"; // 🔄 정답 시 버튼 보이기
-        
+        document.getElementById('single-end-btns').style.display="flex"; 
         if(currentTop10.length<10 || elapsedTime < currentTop10[currentTop10.length-1].time) {
             setTimeout(()=> { document.getElementById('record-time').innerText=elapsedTime; document.getElementById('name-modal').classList.remove('hidden'); }, 1000);
         }
@@ -157,139 +139,103 @@ function playSingle() {
         clearInterval(timerInterval); playSound(outSound); pEff.innerText="실패!"; pEff.style.color="#ef5350";
         rb.insertAdjacentHTML('beforeend', `<div class="fail-message"><h1>실패!</h1><p>정답: <strong>[ ${targetNumbers.join('')} ]</strong></p></div>`);
         document.getElementById('submit-btn').disabled=true; document.getElementById('user-input').disabled=true; 
-        document.getElementById('single-end-btns').style.display="flex"; // 🔄 실패 시 버튼 보이기
-        rb.scrollTop=rb.scrollHeight;
+        document.getElementById('single-end-btns').style.display="flex"; rb.scrollTop=rb.scrollHeight;
     } else { s===0&&b===0 ? playSound(outSound) : playSound(strikeSound); }
     document.getElementById('user-input').value=''; document.getElementById('user-input').focus();
 }
 
 document.getElementById('save-name-btn').addEventListener('click', () => {
     let finalName = document.getElementById('player-name').value.trim() || '익명';
-    rankRef.push({ name: finalName, time: elapsedTime });
-    document.getElementById('name-modal').classList.add('hidden');
+    rankRef.push({ name: finalName, time: elapsedTime }); document.getElementById('name-modal').classList.add('hidden');
 });
 
-// 🔄 버튼 이벤트 연결
 document.getElementById('btn-single-play').addEventListener('click', () => { updateNickname(); showScreen('screen-single'); initSingleGame(); });
 document.getElementById('retry-btn').addEventListener('click', initSingleGame);
 document.getElementById('home-btn').addEventListener('click', () => showScreen('screen-mode-select'));
 
 
 // =======================================================================
-// ⚔️ 3. 온라인 1:1 대전 플레이 로직 (로비 시스템 개편!)
+// ⚔️ 3. 온라인 1:1 대전 플레이 로직 (자동 청소 기능 포함)
 // =======================================================================
 const myUid = "user_" + Math.random().toString(36).substr(2, 9);
 let currentRoomId = null, myRole = null, multiPhase = '', currentTurn = 1, oppName = "상대방";
 
-// [대전 모드 클릭] -> 로비로 이동 및 전체 방 목록 실시간 감지
 document.getElementById('btn-multi-play').addEventListener('click', () => {
     updateNickname(); 
     showScreen('screen-lobby'); 
     
-    // 실시간 방 목록 불러오기
     db.ref('rooms').on('value', (snap) => {
-        const listEl = document.getElementById('room-list');
-        listEl.innerHTML = '';
+        const listEl = document.getElementById('room-list'); listEl.innerHTML = '';
         
-        if (!snap.exists()) {
-            listEl.innerHTML = '<li style="text-align:center; padding:30px 0; color:#8b949e;">현재 개설된 방이 없습니다.<br>새로운 방을 만들어보세요!</li>';
-            return;
+        let hasActiveRooms = false; // 보여줄 방이 있는지 체크
+
+        if (snap.exists()) {
+            snap.forEach(child => {
+                const room = child.val();
+                const roomId = child.key;
+                
+                // 🧹 핵심 로직: 게임 중이거나 대기 중인 방만 보여줌 (끝난 방은 무시!)
+                if (room.status !== 'waiting' && room.status !== 'playing') return;
+                
+                hasActiveRooms = true;
+                const isWaiting = room.status === 'waiting';
+                const statusText = isWaiting ? '🟢 대기 중 (1/2)' : '🔴 게임 중 (2/2)';
+                const statusClass = isWaiting ? 'status-waiting' : 'status-playing';
+                const itemClass = isWaiting ? 'waiting' : 'playing';
+
+                const li = document.createElement('li');
+                li.className = `room-item ${itemClass}`;
+                li.innerHTML = `<span class="room-title">${room.p1_name}님의 방</span><span class="room-status ${statusClass}">${statusText}</span>`;
+
+                if (isWaiting) li.addEventListener('click', () => joinRoom(roomId));
+                listEl.appendChild(li);
+            });
         }
 
-        snap.forEach(child => {
-            const room = child.val();
-            const roomId = child.key;
-            const isWaiting = room.status === 'waiting';
-            
-            // 상태에 따른 텍스트와 클래스 결정
-            const statusText = isWaiting ? '🟢 대기 중 (1/2)' : '🔴 게임 중 (2/2)';
-            const statusClass = isWaiting ? 'status-waiting' : 'status-playing';
-            const itemClass = isWaiting ? 'waiting' : 'playing';
-
-            const li = document.createElement('li');
-            li.className = `room-item ${itemClass}`;
-            li.innerHTML = `
-                <span class="room-title">${room.p1_name}님의 방</span>
-                <span class="room-status ${statusClass}">${statusText}</span>
-            `;
-
-            // 대기 중인 방만 클릭해서 난입 가능!
-            if (isWaiting) {
-                li.addEventListener('click', () => joinRoom(roomId));
-            }
-            listEl.appendChild(li);
-        });
+        // 보여줄 방이 하나도 없으면 안내문구 출력
+        if (!hasActiveRooms) {
+            listEl.innerHTML = '<li style="text-align:center; padding:30px 0; color:#8b949e;">현재 개설된 방이 없습니다.<br>새로운 방을 만들어보세요!</li>';
+        }
     });
 });
 
-// [대기실 나가기] -> 홈으로
 document.getElementById('btn-leave-lobby').addEventListener('click', () => {
-    db.ref('rooms').off(); // 방 목록 새로고침 끄기
-    showScreen('screen-mode-select');
+    db.ref('rooms').off(); showScreen('screen-mode-select');
 });
 
-// [방 만들기] -> 내가 P1이 됨
 document.getElementById('btn-create-room').addEventListener('click', () => {
-    db.ref('rooms').off(); // 방 목록 새로고침 끄기
-    
+    db.ref('rooms').off(); 
     const newRoom = db.ref('rooms').push();
-    currentRoomId = newRoom.key;
-    myRole = 'p1';
-    
-    newRoom.set({
-        status: 'waiting',
-        p1: myUid,
-        p1_name: globalNickname,
-        p1_target: "", p2_target: "", turn: 1
-    });
-    
-    enterMultiRoom(); // 방 안으로 이동
+    currentRoomId = newRoom.key; myRole = 'p1';
+    newRoom.set({ status: 'waiting', p1: myUid, p1_name: globalNickname, p1_target: "", p2_target: "", turn: 1 });
+    enterMultiRoom(); 
 });
 
-// [방 참가하기] -> 목록에서 방을 클릭했을 때 (내가 P2가 됨)
 function joinRoom(roomId) {
-    db.ref('rooms').off(); // 방 목록 새로고침 끄기
-    
-    currentRoomId = roomId;
-    myRole = 'p2';
-    
-    db.ref('rooms/' + roomId).update({
-        p2: myUid,
-        p2_name: globalNickname,
-        status: 'playing' // 내가 들어갔으니 게임 중으로 상태 변경!
-    });
-    
-    enterMultiRoom(); // 방 안으로 이동
+    db.ref('rooms').off(); 
+    currentRoomId = roomId; myRole = 'p2';
+    db.ref('rooms/' + roomId).update({ p2: myUid, p2_name: globalNickname, status: 'playing' });
+    enterMultiRoom(); 
 }
 
-// [공통] 방 안으로 이동 및 게임 진행 로직
 function enterMultiRoom() {
     showScreen('screen-multi'); 
     document.getElementById('multi-result-board').innerHTML = '';
     document.getElementById('multi-exit-btn').style.display = 'none';
-    
-    // 혼자 방에 들어왔을 때 입력창 막아두기
-    document.getElementById('multi-input').disabled = true;
-    document.getElementById('multi-submit-btn').disabled = true;
+    document.getElementById('multi-input').disabled = true; document.getElementById('multi-submit-btn').disabled = true;
     document.getElementById('multi-input').value = '';
-    
-    document.getElementById('my-secret-box').classList.add('hidden');
-    document.getElementById('my-secret-number').innerText = '';
+    document.getElementById('my-secret-box').classList.add('hidden'); document.getElementById('my-secret-number').innerText = '';
 
-    multiPhase = 'waiting_player'; // 신규 상태: 상대방 기다리는 중
-    currentTurn = 1;
-    
+    multiPhase = 'waiting_player'; currentTurn = 1;
     document.getElementById('multi-my-name').innerText = globalNickname;
     document.getElementById('multi-opp-name').innerText = "대기 중...";
     document.getElementById('multi-status-msg').innerText = "⏳ 상대방이 들어오기를 기다리는 중입니다...";
 
-    // 방 내부 실시간 감지
     db.ref('rooms/' + currentRoomId).on('value', snap => {
         const rData = snap.val(); if (!rData) return;
         
-        if (rData.status === 'abandoned') { alert(`⚠️ 상대방이 나갔습니다. 방이 폭파됩니다.`); leaveMultiGame(); return; }
+        if (rData.status === 'abandoned') { alert(`⚠️ 상대방이 도망갔습니다.`); leaveMultiGame(); return; }
 
-        // 누군가(p2) 들어와서 상태가 playing이 되었을 때!
         if (multiPhase === 'waiting_player' && rData.status === 'playing') {
             multiPhase = 'setting';
             if (myRole === 'p1') oppName = rData.p2_name || "상대방";
@@ -297,19 +243,15 @@ function enterMultiRoom() {
             
             document.getElementById('multi-opp-name').innerText = oppName;
             document.getElementById('multi-status-msg').innerText = "⚔️ 매칭 성공! 상대가 맞출 내 비밀 숫자를 설정하세요.";
-            document.getElementById('multi-input').disabled = false;
-            document.getElementById('multi-submit-btn').disabled = false;
+            document.getElementById('multi-input').disabled = false; document.getElementById('multi-submit-btn').disabled = false;
         }
 
-        // 서로 타겟 숫자를 설정 완료했을 때
         if (multiPhase === 'setting' && rData.p1_target !== "" && rData.p2_target !== "") {
             multiPhase = 'playing';
             document.getElementById('multi-status-msg').innerText = `🔥 전투 시작! [1턴] ${oppName}의 숫자를 맞춰보세요!`;
-            document.getElementById('multi-input').disabled = false; 
-            document.getElementById('multi-submit-btn').disabled = false;
+            document.getElementById('multi-input').disabled = false; document.getElementById('multi-submit-btn').disabled = false;
         }
 
-        // 전투 진행 중
         if (multiPhase === 'playing') {
             const tData = rData.guesses ? rData.guesses[currentTurn] : null;
             if (tData && tData.p1 && tData.p2) {
@@ -328,14 +270,11 @@ document.getElementById('multi-submit-btn').addEventListener('click', () => {
     const val = document.getElementById('multi-input').value;
     if (val.length !== 3 || isNaN(val) || new Set(val.split('')).size !== 3) { alert("중복 없는 3자리 숫자를 입력하세요!"); return; }
 
-    document.getElementById('multi-input').value = ''; 
-    document.getElementById('multi-input').disabled = true; 
-    document.getElementById('multi-submit-btn').disabled = true;
+    document.getElementById('multi-input').value = ''; document.getElementById('multi-input').disabled = true; document.getElementById('multi-submit-btn').disabled = true;
 
     if (multiPhase === 'setting') {
         document.getElementById('multi-status-msg').innerText = "⏳ 상대방 설정을 기다리는 중...";
-        document.getElementById('my-secret-number').innerText = val;
-        document.getElementById('my-secret-box').classList.remove('hidden');
+        document.getElementById('my-secret-number').innerText = val; document.getElementById('my-secret-box').classList.remove('hidden');
         const updates = {}; updates[myRole + '_target'] = val; db.ref('rooms/' + currentRoomId).update(updates);
     } else if (multiPhase === 'playing') {
         document.getElementById('multi-status-msg').innerText = "⏳ 상대방 공격을 기다리는 중...";
@@ -360,17 +299,12 @@ function processTurnResult(myGuess, oppGuess, myTarget, oppTarget) {
     const board = document.getElementById('multi-result-board');
     let resHTML = `
         <div class="log-entry" style="display:flex; justify-content:space-between; border-bottom: 1px dashed rgba(255,255,255,0.1); padding: 12px 0;">
-            <div style="flex:1; text-align:left;">
-                <span style="color:#2196f3; font-weight:bold;">${globalNickname}</span> ${myGuess} ➔ <br>${myResText}
-            </div>
-            <div style="flex:1; text-align:right;">
-                <span style="color:#ef5350; font-weight:bold;">${oppName}</span> ${oppGuess} ➔ <br>${oppResText}
-            </div>
+            <div style="flex:1; text-align:left;"><span style="color:#2196f3; font-weight:bold;">${globalNickname}</span> ${myGuess} ➔ <br>${myResText}</div>
+            <div style="flex:1; text-align:right;"><span style="color:#ef5350; font-weight:bold;">${oppName}</span> ${oppGuess} ➔ <br>${oppResText}</div>
         </div>`;
     board.insertAdjacentHTML('beforeend', resHTML); board.scrollTop = board.scrollHeight;
 
-    const mpEff = document.getElementById('multi-pop-effect');
-    let popText = "";
+    const mpEff = document.getElementById('multi-pop-effect'); let popText = "";
     if (myS === 3) { popText = "정답! 🎉"; mpEff.style.color = "#4caf50"; }
     else if (myS === 0 && myB === 0) { popText = "아웃!"; mpEff.style.color = "#ef5350"; }
     else { popText = `${myS > 0 ? myS+'S ' : ''}${myB > 0 ? myB+'B' : ''}`.trim(); mpEff.style.color = "#ffeb3b"; }
@@ -383,8 +317,7 @@ function processTurnResult(myGuess, oppGuess, myTarget, oppTarget) {
     else {
         document.getElementById('multi-status-msg').innerText = `[${currentTurn + 1}턴] 다음 숫자를 입력하세요!`;
         document.getElementById('multi-input').disabled = false; document.getElementById('multi-submit-btn').disabled = false;
-        document.getElementById('multi-input').focus();
-        (myS===0&&myB===0) ? playSound(outSound) : playSound(strikeSound);
+        document.getElementById('multi-input').focus(); (myS===0&&myB===0) ? playSound(outSound) : playSound(strikeSound);
     }
 }
 
@@ -392,12 +325,24 @@ function finishMultiGame(msg, oppTarget) {
     if(msg.includes("승리")) { playSound(winSound); shootConfetti(); } else playSound(outSound);
     document.getElementById('multi-status-msg').innerHTML = `${msg} <br><span style="font-size:0.9em; color:#8b949e; display:block; margin-top:8px;">${oppName}의 숫자: ${oppTarget}</span>`;
     document.getElementById('multi-exit-btn').style.display = 'inline-block';
-    db.ref('rooms/' + currentRoomId).off();
+    
+    // 🧹 방 상태를 'finished'로 바꿔서 로비에서 즉시 숨김
+    db.ref('rooms/' + currentRoomId).update({status: 'finished'}); 
+    db.ref('rooms/' + currentRoomId).off(); // 내 실시간 리스너 끄기
 }
 
 document.getElementById('multi-exit-btn').addEventListener('click', leaveMultiGame);
+
 function leaveMultiGame() {
-    if (currentRoomId) { db.ref('rooms/' + currentRoomId).update({status: 'abandoned'}); db.ref('rooms/' + currentRoomId).off(); }
+    if (currentRoomId) { 
+        db.ref('rooms/' + currentRoomId).update({status: 'abandoned'}); 
+        
+        // 🧹 2초 뒤 서버에서 방 데이터를 완전히 삭제 (DB 용량 최적화)
+        const roomIdToDelete = currentRoomId; 
+        setTimeout(() => { db.ref('rooms/' + roomIdToDelete).remove(); }, 2000); 
+        
+        db.ref('rooms/' + currentRoomId).off(); 
+    }
     currentRoomId = null; 
-    document.getElementById('btn-multi-play').click(); // 방에서 나가면 다시 대기실 로비로 이동!
+    document.getElementById('btn-multi-play').click(); // 로비 화면으로 이동!
 }
