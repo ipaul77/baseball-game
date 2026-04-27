@@ -1,79 +1,86 @@
-* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Poppins', sans-serif; }
-body { display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 100vh; background: #0d1117; gap: 30px; overflow-x: hidden; padding: 20px 0; }
+@import url('https://cdn.jsdelivr.net/gh/orioncactus/pretendard/dist/web/static/pretendard.css');
 
-.navigation { width: 350px; height: 70px; background: #2b3a55; position: relative; display: flex; justify-content: center; align-items: center; z-index: 10; border-radius: 10px; }
+* { margin: 0; padding: 0; box-sizing: border-box; font-family: 'Pretendard', -apple-system, BlinkMacSystemFont, system-ui, Roboto, sans-serif; -webkit-tap-highlight-color: transparent; }
+body { display: flex; flex-direction: column; justify-content: center; align-items: center; min-height: 100vh; background: radial-gradient(circle at top left, #2a2d43, #0d1117); color: #e6edf3; gap: 20px; overflow-x: hidden; padding: env(safe-area-inset-top) 15px env(safe-area-inset-bottom); }
+
+/* 네비게이션바 디자인 개선 */
+.navigation { width: 340px; height: 70px; background: rgba(33, 38, 45, 0.85); backdrop-filter: blur(10px); position: relative; display: flex; justify-content: center; align-items: center; z-index: 10; border-radius: 20px; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 10px 25px rgba(0,0,0,0.5); }
 .navigation ul { display: flex; width: 280px; }
 .navigation ul li { position: relative; list-style: none; width: 70px; height: 70px; z-index: 1; }
 .navigation ul li a { position: relative; display: flex; justify-content: center; align-items: center; flex-direction: column; width: 100%; text-align: center; font-weight: 500; }
-.navigation ul li a .icon { position: relative; display: block; line-height: 75px; font-size: 1.5em; text-align: center; transition: 0.5s; color: #fff; }
-.navigation ul .indicator { position: absolute; top: -50%; width: 70px; height: 70px; background: #fff; border-radius: 50%; border: 6px solid #0d1117; transition: 0.5s; }
+.navigation ul li a .icon { position: relative; display: block; line-height: 75px; font-size: 1.6em; text-align: center; transition: 0.5s; color: #a1a1aa; }
+.navigation ul .indicator { position: absolute; top: -50%; width: 70px; height: 70px; background: linear-gradient(135deg, #7e57c2, #512da8); border-radius: 50%; border: 6px solid #0d1117; transition: 0.5s; }
 .navigation ul .indicator::before { content: ''; position: absolute; top: 50%; left: -22px; width: 20px; height: 20px; background: transparent; border-top-right-radius: 20px; box-shadow: 1px -10px 0 0 #0d1117; }
 .navigation ul .indicator::after { content: ''; position: absolute; top: 50%; right: -22px; width: 20px; height: 20px; background: transparent; border-top-left-radius: 20px; box-shadow: -1px -10px 0 0 #0d1117; }
-.navigation ul li.active a .icon { transform: translateY(-32px); color: #0d1117; }
+.navigation ul li.active a .icon { transform: translateY(-32px); color: #fff; }
 .navigation ul li:nth-child(1).active ~ .indicator { transform: translateX(calc(70px * 0)); }
 .navigation ul li:nth-child(2).active ~ .indicator { transform: translateX(calc(70px * 1)); }
 .navigation ul li:nth-child(3).active ~ .indicator { transform: translateX(calc(70px * 2)); }
 .navigation ul li:nth-child(4).active ~ .indicator { transform: translateX(calc(70px * 3)); }
-.navigation.theme-purple { background: #9c27b0; }
 
-.game-container { width: 420px; background: #161b22; padding: 25px; border-radius: 15px; color: white; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.5); z-index: 5; margin-bottom: 20px; }
-.game-container h2 { margin-bottom: 5px; font-size: 1.5em; }
-.game-container p { font-size: 0.85em; color: #8b949e; margin-bottom: 15px; }
+/* 메인 게임 컨테이너 (글래스모피즘) */
+.game-container { width: 100%; max-width: 420px; background: rgba(22, 27, 34, 0.7); backdrop-filter: blur(15px); padding: 30px 25px; border-radius: 24px; text-align: center; border: 1px solid rgba(255,255,255,0.08); box-shadow: 0 15px 35px rgba(0,0,0,0.6); position: relative; margin-bottom: 20px; }
+.game-container h2 { margin-bottom: 8px; font-size: 1.6em; letter-spacing: -0.5px; }
+.game-container p { font-size: 0.9em; color: #8b949e; margin-bottom: 20px; }
 
-#timer-display { font-size: 1.8em; font-weight: bold; color: #ffeb3b; background: #0d1117; padding: 10px; border-radius: 8px; margin-bottom: 15px; letter-spacing: 2px; }
+/* 아이폰 줌 방지 및 입력창 스타일 */
+input { width: 100%; padding: 14px; font-size: 16px; /* iOS 자동 줌 방지 핵심! */ text-align: center; border-radius: 12px; border: 1px solid rgba(255,255,255,0.2); background: rgba(0,0,0,0.3); color: white; outline: none; transition: 0.3s; box-shadow: inset 0 2px 4px rgba(0,0,0,0.5); }
+input:focus { border-color: #2196f3; box-shadow: 0 0 10px rgba(33, 150, 243, 0.4), inset 0 2px 4px rgba(0,0,0,0.5); }
+.input-area { display: flex; gap: 10px; margin-bottom: 20px; }
+.input-area input { flex: 1; }
+.input-area button { width: 80px; }
 
-.input-area { display: flex; justify-content: center; gap: 10px; margin-bottom: 15px; }
-#user-input { width: 150px; padding: 10px; font-size: 1.2em; text-align: center; border-radius: 8px; border: none; outline: none; }
-#submit-btn, #restart-btn { padding: 10px 20px; font-size: 1em; background: #9c27b0; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s; }
-#submit-btn:hover, #restart-btn:hover { background: #ba68c8; }
+/* 버튼 디자인 */
+.mode-btn { width: 100%; padding: 16px; margin-bottom: 12px; font-size: 1.1em; color: white; border: none; border-radius: 14px; cursor: pointer; font-weight: 700; transition: transform 0.1s, filter 0.2s; box-shadow: 0 4px 15px rgba(0,0,0,0.3); }
+.mode-btn:active { transform: scale(0.96); }
+.mode-btn:hover { filter: brightness(1.1); }
+.btn-purple { background: linear-gradient(135deg, #ab47bc, #7b1fa2); }
+.btn-blue { background: linear-gradient(135deg, #42a5f5, #1976d2); }
+.btn-red { background: linear-gradient(135deg, #ef5350, #c62828); }
+.btn-green { background: linear-gradient(135deg, #66bb6a, #2e7d32); }
 
-#result-board { background: #0d1117; padding: 15px; border-radius: 8px; min-height: 120px; max-height: 180px; overflow-y: auto; text-align: left; display: flex; flex-direction: column; gap: 8px; margin-bottom: 15px; scroll-behavior: smooth; }
-.log-entry { font-size: 0.95em; border-bottom: 1px solid #30363d; padding-bottom: 5px;}
-.attempt-count { color: #8b949e; font-weight: bold; margin-right: 8px; }
-.strike { color: #4caf50; font-weight: bold; }
-.ball { color: #ff9800; font-weight: bold; }
-.out { color: #f44336; font-weight: bold; }
+/* 멀티플레이 헤더 및 UI */
+.versus-header { display: flex; justify-content: space-between; align-items: center; background: rgba(0,0,0,0.4); padding: 10px 15px; border-radius: 12px; margin-bottom: 15px; font-weight: bold; }
+.p-name { font-size: 1.1em; padding: 4px 10px; border-radius: 8px; }
+.my-name { color: #2196f3; background: rgba(33, 150, 243, 0.15); }
+.opp-name { color: #f44336; background: rgba(244, 67, 54, 0.15); }
+.vs-text { color: #8b949e; font-size: 0.9em; font-style: italic; }
+.profile-input-area { margin-bottom: 25px; }
+.highlight-text { color: #ffeb3b !important; font-weight: 600; }
 
-.fail-message { margin-top: 10px; text-align: center; color: #f44336; animation: shake 0.5s ease-in-out; }
-.fail-message h1 { font-size: 3em; margin-bottom: 5px; text-shadow: 0 0 15px rgba(244, 67, 54, 0.6); }
-@keyframes shake { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-10px); } 40%, 80% { transform: translateX(10px); } }
+/* 로그 보드 및 타이머 */
+#timer-display { font-size: 1.8em; font-weight: 800; color: #ffeb3b; background: rgba(0,0,0,0.4); padding: 12px; border-radius: 12px; margin-bottom: 20px; font-variant-numeric: tabular-nums; }
+#result-board, #multi-result-board { background: rgba(0,0,0,0.4); padding: 15px; border-radius: 12px; min-height: 120px; max-height: 220px; overflow-y: auto; text-align: left; display: flex; flex-direction: column; gap: 10px; margin-bottom: 15px; border: 1px solid rgba(255,255,255,0.05); }
+.log-entry { font-size: 1em; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 8px; }
+.attempt-count { color: #8b949e; font-weight: 600; margin-right: 8px; font-size: 0.9em; }
+.strike { color: #4caf50; font-weight: 800; }
+.ball { color: #ff9800; font-weight: 800; }
+.out { color: #ef5350; font-weight: 800; }
+.fail-message { text-align: center; color: #ef5350; animation: shake 0.4s ease-in-out; margin-top: 10px; }
+.fail-message h1 { font-size: 2.5em; text-shadow: 0 0 10px rgba(239, 83, 80, 0.5); }
 
-#leaderboard { margin-top: 20px; background: #21262d; padding: 15px; border-radius: 8px; border: 1px solid #30363d; }
-#leaderboard h3 { font-size: 1.1em; color: #ffeb3b; margin-bottom: 15px; }
-
-/* 📅 신규: 시즌 정보 스타일 */
-#season-info { background: #0d1117; padding: 10px; border-radius: 5px; margin-bottom: 15px; font-size: 0.9em; text-align: left; line-height: 1.5; }
+/* 리더보드 */
+#leaderboard { margin-top: 25px; background: rgba(0,0,0,0.3); padding: 15px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.05); }
+#leaderboard h3 { font-size: 1.1em; color: #ffeb3b; margin-bottom: 12px; }
+#season-info { background: rgba(0,0,0,0.5); padding: 12px; border-radius: 8px; margin-bottom: 15px; font-size: 0.85em; text-align: left; line-height: 1.6; }
 #season-countdown { color: #ff9800; font-weight: bold; }
 #prev-winner { color: #4caf50; }
-#prev-winner strong { color: #fff; font-size: 1.1em; }
+#rank-list { list-style: none; text-align: left; padding: 0 5px; max-height: 200px; overflow-y: auto; } 
+#rank-list li { display: flex; justify-content: space-between; font-size: 0.95em; padding: 8px 0; border-bottom: 1px dashed rgba(255,255,255,0.1); }
 
-#rank-list { list-style: none; text-align: left; padding: 0 10px; max-height: 250px; overflow-y: auto; } 
-#rank-list li { display: flex; justify-content: space-between; font-size: 0.9em; padding: 5px 0; border-bottom: 1px dashed #484f58; }
+/* 모달 및 애니메이션 */
+.modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); backdrop-filter: blur(5px); display: flex; justify-content: center; align-items: center; z-index: 100; }
+.modal-content { background: #161b22; padding: 30px; border-radius: 20px; text-align: center; color: white; width: 90%; max-width: 320px; border: 1px solid #4caf50; box-shadow: 0 0 30px rgba(76, 175, 80, 0.3); }
+.modal-content input { margin: 20px 0; }
 
-.modal { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); display: flex; justify-content: center; align-items: center; z-index: 100; }
-.modal.hidden { display: none; }
-.modal-content { background: #161b22; padding: 30px; border-radius: 15px; text-align: center; color: white; width: 300px; border: 2px solid #4caf50; }
-.modal-content input { width: 100%; padding: 10px; margin: 15px 0; text-align: center; font-size: 1.2em; border-radius: 5px; outline: none; border: none; }
-.modal-content button { padding: 10px 20px; background: #4caf50; color: white; border: none; border-radius: 5px; font-weight: bold; cursor: pointer; width: 100%; }
-
-.confetti { position: fixed; top: -10px; width: 10px; height: 10px; z-index: 99; animation: fall 3s linear forwards; }
-@keyframes fall { to { transform: translateY(100vh) rotate(720deg); } }
-
-button, input { touch-action: manipulation; }
-@media (max-width: 450px) { .navigation { transform: scale(0.85); margin-top: 10px; } .game-container { width: 90%; padding: 15px; } }
-
-/* 화면 전환을 위한 클래스 */
 .hidden { display: none !important; }
-.active-screen { display: block; animation: fadeIn 0.5s; }
+.active-screen { display: block; animation: fadeIn 0.4s ease-out forwards; }
+@keyframes fadeIn { from { opacity: 0; transform: scale(0.95) translateY(10px); } to { opacity: 1; transform: scale(1) translateY(0); } }
+@keyframes shake { 0%, 100% { transform: translateX(0); } 20%, 60% { transform: translateX(-8px); } 40%, 80% { transform: translateX(8px); } }
+.loader { margin: 30px auto; width: 50px; height: 50px; border: 4px solid rgba(255,255,255,0.1); border-top: 4px solid #2196f3; border-radius: 50%; animation: spin 1s cubic-bezier(0.5, 0, 0.5, 1) infinite; }
+@keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-.mode-btn {
-    width: 100%; padding: 15px; margin-bottom: 10px;
-    font-size: 1.1em; background: #2196f3; color: white;
-    border: none; border-radius: 8px; cursor: pointer; font-weight: bold;
-}
-.mode-btn:hover { background: #1976d2; }
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(10px); }
-    to { opacity: 1; transform: translateY(0); }
-}
+/* 빠방 효과 */
+#pop-effect, #multi-pop-effect { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%) scale(0); font-size: 4.5em; font-weight: 900; text-shadow: 0 10px 25px rgba(0,0,0,0.9), 0 0 15px rgba(255,255,255,0.2); pointer-events: none; z-index: 1000; opacity: 0; white-space: nowrap; font-style: italic; }
+.pop-animate { animation: popBoom 1.2s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards; }
+@keyframes popBoom { 0% { transform: translate(-50%, -50%) scale(0.3); opacity: 0; } 20% { transform: translate(-50%, -50%) scale(1.1) rotate(-3deg); opacity: 1; } 40% { transform: translate(-50%, -50%) scale(1) rotate(0deg); opacity: 1; } 70% { transform: translate(-50%, -50%) scale(1); opacity: 1; } 100% { transform: translate(-50%, -50%) scale(1.5); opacity: 0; } }
