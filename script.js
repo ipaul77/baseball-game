@@ -1,24 +1,21 @@
-// --- ☁️ 0. Firebase 데이터베이스 설정 (본인 키와 databaseURL 필수 입력!) ---
+// --- ☁️ 0. Firebase 데이터베이스 설정 (진짜 사용자님 전용 키 적용 완료!) ---
 const firebaseConfig = {
-  apiKey: "AIzaSyBjwePOTKRF2TRYNWqrEg9lyQdZ7BEtEMk",
-  authDomain: "baseball-game-68fbb.firebaseapp.com",
-  projectId: "baseball-game-68fbb",
-  storageBucket: "baseball-game-68fbb.firebasestorage.app",
-  messagingSenderId: "188603859302",
-  appId: "1:188603859302:web:87ded952a72ed35b3088a7"
+    apiKey: "AIzaSyBjwePOTKRF2TRYNwqREg9lyQdZ7BEtEMk",
+    authDomain: "baseball-game-68fbb.firebaseapp.com",
+    databaseURL: "https://baseball-game-68fbb-default-rtdb.firebaseio.com",
+    projectId: "baseball-game-68fbb",
+    storageBucket: "baseball-game-68fbb.firebasestorage.app",
+    messagingSenderId: "188603859302",
+    appId: "1:188603859302:web:87ded952a72ed35b3088a7"
 };
 
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
-const resultBoard = document.getElementById('result-board');
-const restartBtn = document.getElementById('restart-btn');
-const popEffect = document.getElementById('pop-effect'); // 💥 추가된 팝업 요소
 
 // --- 📅 1. 3일 주기 시즌제 및 남은 시간 카운트다운 로직 ---
 const threeDaysInMs = 3 * 24 * 60 * 60 * 1000; // 3일 = 밀리초
 
-// 현재 시즌 번호와 다음 시즌 초기화 시간 계산
 function getSeasonData() {
     const currentMs = Date.now();
     const seasonNumber = Math.floor(currentMs / threeDaysInMs);
@@ -38,13 +35,11 @@ function updateSeasonCountdown() {
     const now = Date.now();
     const diff = seasonData.nextTime - now;
 
-    // 만약 타이머가 다 지나서 새로운 시즌이 되었다면 브라우저 새로고침!
     if (diff <= 0) {
-        location.reload(); 
+        location.reload(); // 시즌 만료 시 페이지 새로고침
         return;
     }
 
-    // 남은 밀리초를 일, 시간, 분, 초로 예쁘게 변환
     const d = Math.floor(diff / (1000 * 60 * 60 * 24));
     const h = Math.floor((diff / (1000 * 60 * 60)) % 24);
     const m = Math.floor((diff / 1000 / 60) % 60);
@@ -53,10 +48,9 @@ function updateSeasonCountdown() {
     document.getElementById('season-countdown').innerText = `⏳ 초기화까지: ${d}일 ${h}시간 ${m}분 ${s}초 남음`;
 }
 setInterval(updateSeasonCountdown, 1000);
-updateSeasonCountdown(); // 화면 켜자마자 바로 1번 실행
+updateSeasonCountdown();
 
-
-// --- 👑 지난 시즌 1등 기록 불러오기 (1회성 읽기) ---
+// 👑 지난 시즌 1등 기록 불러오기 (1회성 읽기)
 db.ref('leaderboard/' + seasonData.prev)
   .orderByChild('time')
   .limitToFirst(1)
@@ -65,7 +59,6 @@ db.ref('leaderboard/' + seasonData.prev)
     const prevWinnerEl = document.getElementById('prev-winner');
     if (snapshot.exists()) {
         let winner = null;
-        // 1개만 가져왔지만 파이어베이스 구조상 forEach로 까봐야 함
         snapshot.forEach(child => { winner = child.val(); });
         prevWinnerEl.innerHTML = `👑 지난 시즌 1등: <strong>${winner.name}</strong> (${winner.time}초)`;
     } else {
@@ -119,7 +112,7 @@ function shootConfetti() {
 }
 
 
-// --- 4. 타이머 및 파이어베이스 명예의 전당 (현재 시즌 실시간 업데이트) ---
+// --- 4. 타이머 및 파이어베이스 명예의 전당 ---
 let timerInterval;
 let elapsedTime = 0;
 let isTimerRunning = false;
@@ -180,6 +173,7 @@ const userInput = document.getElementById('user-input');
 const submitBtn = document.getElementById('submit-btn');
 const resultBoard = document.getElementById('result-board');
 const restartBtn = document.getElementById('restart-btn');
+const popEffect = document.getElementById('pop-effect'); // 💥 추가된 팝업 요소
 
 function initGame() {
     targetNumbers = [];
@@ -230,34 +224,34 @@ function playGame() {
     attempts++; 
 
     for (let i = 0; i < 3; i++) {
-	if (guessArr[i] === targetNumbers[i]) strikes++;
+        if (guessArr[i] === targetNumbers[i]) strikes++;
         else if (targetNumbers.includes(guessArr[i])) balls++;
     }
-let popText = "";
+
+    // 💥 신규 추가된 팝업 효과 로직
+    let popText = "";
     let popColor = "";
 
     if (strikes === 3) {
         popText = "정답! 🎉";
-        popColor = "#4caf50"; // 초록색
+        popColor = "#4caf50";
     } else if (strikes === 0 && balls === 0) {
         popText = "아웃!";
-        popColor = "#f44336"; // 빨간색
+        popColor = "#f44336";
     } else {
         if (strikes > 0) popText += `${strikes}S `;
         if (balls > 0) popText += `${balls}B`;
-        popColor = "#ffeb3b"; // 노란색
+        popColor = "#ffeb3b";
     }
 
-    // 팝업 요소에 글자와 색상 적용 후 애니메이션 강제 재실행
+    // 애니메이션 텍스트 및 색상 적용 후 강제 재실행(Reflow)
     popEffect.innerText = popText;
     popEffect.style.color = popColor;
     popEffect.classList.remove('pop-animate');
-    void popEffect.offsetWidth; // 브라우저에 리플로우를 발생시켜 애니메이션을 리셋하는 마법의 코드!
+    void popEffect.offsetWidth; 
     popEffect.classList.add('pop-animate');
-    // 👆 여기까지 신규 팝업 로직 👆
 
-    // --- 이하 기존 결과 리스트 아이템 HTML 생성 로직 동일 ---
-
+    // 리스트에 추가되는 기존 HTML 로직
     let resultHTML = `<div class="log-entry"><span class="attempt-count">[${attempts}/${MAX_ATTEMPTS}]</span> 입력: <strong>${guessStr}</strong> ➔ `;
     
     if (strikes === 3) {
@@ -308,11 +302,20 @@ function endGame(messageHTML) {
     resultBoard.scrollTop = resultBoard.scrollHeight; 
 }
 
+// ☁️ 닉네임을 파이어베이스 서버에 저장 (에러 확인 기능 포함)
 document.getElementById('save-name-btn').addEventListener('click', () => {
     let name = playerNameInput.value.trim().toUpperCase() || 'ANON';
-    rankRef.push({ name: name, time: elapsedTime });
-    nameModal.classList.add('hidden'); 
-    playerNameInput.value = '';
+    
+    rankRef.push({ name: name, time: elapsedTime })
+        .then(() => {
+            console.log("DB 저장 성공!");
+            nameModal.classList.add('hidden'); 
+            playerNameInput.value = '';
+        })
+        .catch((error) => {
+            console.error("DB 저장 실패 원인:", error);
+            alert("서버 저장 실패! 에러: " + error.message);
+        });
 });
 
 restartBtn.addEventListener('click', () => {
