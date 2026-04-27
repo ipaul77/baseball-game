@@ -9,6 +9,15 @@
     <link rel="apple-touch-icon" href="apple-touch-icon.png">
     <title>아이폰 최적화 숫자 야구 게임</title>
     <link rel="stylesheet" href="style.css">
+    
+    <style>
+        .hidden { display: none !important; }
+        .active-screen { display: block; animation: fadeIn 0.5s; }
+        .mode-btn { width: 100%; padding: 15px; margin-bottom: 10px; font-size: 1.1em; background: #2196f3; color: white; border: none; border-radius: 8px; cursor: pointer; font-weight: bold; transition: 0.3s;}
+        .mode-btn:hover { background: #1976d2; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+    </style>
 </head>
 <body>
 
@@ -30,11 +39,25 @@
         </ul>
     </div>
 
-    <div class="game-container">
-        
-        <div id="pop-effect"></div>
-        
+    <div id="screen-mode-select" class="game-container active-screen">
         <h2>⚾ 숫자 야구 게임</h2>
+        <p>원하는 플레이 모드를 선택하세요!</p>
+        <br>
+        <button id="btn-single-play" class="mode-btn" style="background: #9c27b0;">👤 혼자 하기 (기록 경쟁)</button>
+        <button id="btn-multi-play" class="mode-btn">⚔️ 온라인 1:1 대전</button>
+    </div>
+
+    <div id="screen-lobby" class="game-container hidden">
+        <h2>⚔️ 온라인 대기실</h2>
+        <p id="lobby-status" style="margin-top: 20px; font-size: 1.1em; color: #ffeb3b;">상대방을 찾고 있습니다... ⏳</p>
+        
+        <div style="margin: 30px auto; width: 40px; height: 40px; border: 4px solid #30363d; border-top: 4px solid #2196f3; border-radius: 50%; animation: spin 1s linear infinite;"></div>
+        
+        <button id="btn-cancel-match" class="mode-btn" style="background: #f44336; margin-top: 20px;">취소하고 나가기</button>
+    </div>
+
+    <div id="screen-single" class="game-container hidden">
+        <div id="pop-effect"></div> <h2>👤 싱글 플레이</h2>
         <p>0~9 사이의 중복되지 않는 3자리 숫자 맞추기!</p>
         
         <div id="timer-display">⏱ 00:00</div>
@@ -46,19 +69,31 @@
         
         <div id="result-board"></div>
         
-        <button id="restart-btn" style="display: none;">게임 다시 시작</button>
+        <button id="restart-btn" style="display: none; background: #f44336;" class="mode-btn">메인으로 돌아가기</button>
 
         <div id="leaderboard">
             <h3>🏆 시즌 명예의 전당 (Top 10)</h3>
-            
             <div id="season-info">
-                <div id="season-countdown">⏳ 다음 시즌까지: 계산 중...</div>
+                <div id="season-countdown">⏳ 초기화까지: 계산 중...</div>
                 <div id="prev-winner">👑 지난 시즌 1등: 불러오는 중...</div>
             </div>
-
-            <ul id="rank-list">
-                </ul>
+            <ul id="rank-list"></ul>
         </div>
+    </div>
+
+    <div id="screen-multi" class="game-container hidden">
+        <div id="multi-pop-effect" style="position:absolute; top:50%; left:50%; transform:translate(-50%, -50%) scale(0); font-size:4em; font-weight:900; text-shadow:0 8px 20px rgba(0,0,0,0.8); pointer-events:none; z-index:1000; opacity:0; white-space:nowrap;"></div>
+        
+        <h2>⚔️ 1:1 대전 모드</h2>
+        <p id="multi-status-msg" style="color: #ffeb3b; font-weight: bold; margin-bottom: 15px;">상대방이 맞출 내 숫자를 먼저 설정하세요!</p>
+        
+        <div class="input-area">
+            <input type="text" id="multi-input" maxlength="3" autocomplete="off" inputmode="numeric" placeholder="숫자 입력">
+            <button id="multi-submit-btn">확인</button>
+        </div>
+        
+        <div id="multi-result-board"></div>
+        <button id="multi-exit-btn" style="display: none; background: #f44336; margin-top: 15px;" class="mode-btn">대기실로 돌아가기</button>
     </div>
 
     <div id="name-modal" class="modal hidden">
@@ -77,5 +112,6 @@
     <script src="https://www.gstatic.com/firebasejs/10.8.1/firebase-database-compat.js"></script>
     
     <script src="script.js"></script>
+
 </body>
 </html>
