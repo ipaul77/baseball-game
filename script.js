@@ -179,6 +179,11 @@ function startMultiGame() {
     showScreen('screen-multi'); document.getElementById('multi-result-board').innerHTML = '';
     document.getElementById('multi-exit-btn').style.display = 'none'; document.getElementById('multi-input').disabled = false;
     document.getElementById('multi-submit-btn').disabled = false; document.getElementById('multi-input').value = '';
+    
+    // 🔒 신규: 게임 시작 시 내 비밀 숫자 박스 초기화 및 숨기기
+    document.getElementById('my-secret-box').classList.add('hidden');
+    document.getElementById('my-secret-number').innerText = '';
+
     multiPhase = 'setting'; currentTurn = 1;
     document.getElementById('multi-status-msg').innerText = "⚔️ 매칭 성공! 상대가 맞출 내 숫자를 설정하세요.";
     document.getElementById('multi-my-name').innerText = globalNickname;
@@ -186,7 +191,6 @@ function startMultiGame() {
     db.ref('rooms/' + currentRoomId).on('value', snap => {
         const rData = snap.val(); if (!rData) return;
         
-        // 상대방 이름 가져오기
         if (myRole === 'p1' && rData.p2_name) oppName = rData.p2_name;
         if (myRole === 'p2' && rData.p1_name) oppName = rData.p1_name;
         document.getElementById('multi-opp-name').innerText = oppName;
@@ -221,6 +225,11 @@ document.getElementById('multi-submit-btn').addEventListener('click', () => {
 
     if (multiPhase === 'setting') {
         document.getElementById('multi-status-msg').innerText = "⏳ 상대방 설정을 기다리는 중...";
+        
+        // 🔒 신규: 내가 설정한 숫자를 화면에 표시하고 박스를 보여줌!
+        document.getElementById('my-secret-number').innerText = val;
+        document.getElementById('my-secret-box').classList.remove('hidden');
+
         const updates = {}; updates[myRole + '_target'] = val; db.ref('rooms/' + currentRoomId).update(updates);
     } else if (multiPhase === 'playing') {
         document.getElementById('multi-status-msg').innerText = "⏳ 상대방 공격을 기다리는 중...";
@@ -233,7 +242,6 @@ function processTurnResult(myGuess, oppGuess, myTarget, oppTarget) {
     for(let i=0; i<3; i++) { if(myGuess[i] === oppTarget[i]) myS++; else if(oppTarget.includes(myGuess[i])) myB++; }
     for(let i=0; i<3; i++) { if(oppGuess[i] === myTarget[i]) oppS++; else if(myTarget.includes(oppGuess[i])) oppB++; }
 
-    // S/B 텍스트 예쁘게 조합하기 (0은 숨김)
     let myResText = "", oppResText = "";
     if (myS > 0) myResText += `<span class="strike">${myS}S</span> `;
     if (myB > 0) myResText += `<span class="ball">${myB}B</span>`;
@@ -255,7 +263,6 @@ function processTurnResult(myGuess, oppGuess, myTarget, oppTarget) {
         </div>`;
     board.insertAdjacentHTML('beforeend', resHTML); board.scrollTop = board.scrollHeight;
 
-    // 팝업 텍스트 로직 (나의 결과만 띄움)
     const mpEff = document.getElementById('multi-pop-effect');
     let popText = "";
     if (myS === 3) { popText = "정답! 🎉"; mpEff.style.color = "#4caf50"; }
