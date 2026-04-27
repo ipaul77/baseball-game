@@ -11,6 +11,9 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
+const resultBoard = document.getElementById('result-board');
+const restartBtn = document.getElementById('restart-btn');
+const popEffect = document.getElementById('pop-effect'); // 💥 추가된 팝업 요소
 
 // --- 📅 1. 3일 주기 시즌제 및 남은 시간 카운트다운 로직 ---
 const threeDaysInMs = 3 * 24 * 60 * 60 * 1000; // 3일 = 밀리초
@@ -227,9 +230,33 @@ function playGame() {
     attempts++; 
 
     for (let i = 0; i < 3; i++) {
-        if (guessArr[i] === targetNumbers[i]) strikes++;
+	if (guessArr[i] === targetNumbers[i]) strikes++;
         else if (targetNumbers.includes(guessArr[i])) balls++;
     }
+let popText = "";
+    let popColor = "";
+
+    if (strikes === 3) {
+        popText = "정답! 🎉";
+        popColor = "#4caf50"; // 초록색
+    } else if (strikes === 0 && balls === 0) {
+        popText = "아웃!";
+        popColor = "#f44336"; // 빨간색
+    } else {
+        if (strikes > 0) popText += `${strikes}S `;
+        if (balls > 0) popText += `${balls}B`;
+        popColor = "#ffeb3b"; // 노란색
+    }
+
+    // 팝업 요소에 글자와 색상 적용 후 애니메이션 강제 재실행
+    popEffect.innerText = popText;
+    popEffect.style.color = popColor;
+    popEffect.classList.remove('pop-animate');
+    void popEffect.offsetWidth; // 브라우저에 리플로우를 발생시켜 애니메이션을 리셋하는 마법의 코드!
+    popEffect.classList.add('pop-animate');
+    // 👆 여기까지 신규 팝업 로직 👆
+
+    // --- 이하 기존 결과 리스트 아이템 HTML 생성 로직 동일 ---
 
     let resultHTML = `<div class="log-entry"><span class="attempt-count">[${attempts}/${MAX_ATTEMPTS}]</span> 입력: <strong>${guessStr}</strong> ➔ `;
     
