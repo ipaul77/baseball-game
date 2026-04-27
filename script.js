@@ -1,12 +1,11 @@
 // --- ☁️ 0. Firebase 데이터베이스 설정 (본인 키와 databaseURL 필수 입력!) ---
 const firebaseConfig = {
-    apiKey: "본인의 API 키를 여기에 붙여넣으세요",
-    authDomain: "본인의 프로젝트명.firebaseapp.com",
-    databaseURL: "https://본인의-데이터베이스-주소.firebaseio.com",
-    projectId: "본인의 프로젝트명",
-    storageBucket: "본인의 프로젝트명.appspot.com",
-    messagingSenderId: "숫자",
-    appId: "본인의 앱 ID"
+  apiKey: "AIzaSyBjwePOTKRF2TRYNWqrEg9lyQdZ7BEtEMk",
+  authDomain: "baseball-game-68fbb.firebaseapp.com",
+  projectId: "baseball-game-68fbb",
+  storageBucket: "baseball-game-68fbb.firebasestorage.app",
+  messagingSenderId: "188603859302",
+  appId: "1:188603859302:web:87ded952a72ed35b3088a7"
 };
 
 firebase.initializeApp(firebaseConfig);
