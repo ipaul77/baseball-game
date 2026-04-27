@@ -155,7 +155,7 @@ document.getElementById('home-btn').addEventListener('click', () => showScreen('
 
 
 // =======================================================================
-// ⚔️ 3. 온라인 1:1 대전 플레이 로직 (자동 청소 기능 포함)
+// ⚔️ 3. 온라인 1:1 대전 플레이 로직 (유령 방 완벽 청소 적용)
 // =======================================================================
 const myUid = "user_" + Math.random().toString(36).substr(2, 9);
 let currentRoomId = null, myRole = null, multiPhase = '', currentTurn = 1, oppName = "상대방";
@@ -166,15 +166,13 @@ document.getElementById('btn-multi-play').addEventListener('click', () => {
     
     db.ref('rooms').on('value', (snap) => {
         const listEl = document.getElementById('room-list'); listEl.innerHTML = '';
-        
-        let hasActiveRooms = false; // 보여줄 방이 있는지 체크
+        let hasActiveRooms = false;
 
         if (snap.exists()) {
             snap.forEach(child => {
                 const room = child.val();
                 const roomId = child.key;
                 
-                // 🧹 핵심 로직: 게임 중이거나 대기 중인 방만 보여줌 (끝난 방은 무시!)
                 if (room.status !== 'waiting' && room.status !== 'playing') return;
                 
                 hasActiveRooms = true;
@@ -192,7 +190,6 @@ document.getElementById('btn-multi-play').addEventListener('click', () => {
             });
         }
 
-        // 보여줄 방이 하나도 없으면 안내문구 출력
         if (!hasActiveRooms) {
             listEl.innerHTML = '<li style="text-align:center; padding:30px 0; color:#8b949e;">현재 개설된 방이 없습니다.<br>새로운 방을 만들어보세요!</li>';
         }
@@ -207,14 +204,25 @@ document.getElementById('btn-create-room').addEventListener('click', () => {
     db.ref('rooms').off(); 
     const newRoom = db.ref('rooms').push();
     currentRoomId = newRoom.key; myRole = 'p1';
+    
     newRoom.set({ status: 'waiting', p1: myUid, p1_name: globalNickname, p1_target: "", p2_target: "", turn: 1 });
+    
+    // ✨ 방장이 창을 닫으면 즉시 방 삭제 예약
+    newRoom.onDisconnect().remove();
+    
     enterMultiRoom(); 
 });
 
 function joinRoom(roomId) {
     db.ref('rooms').off(); 
     currentRoomId = roomId; myRole = 'p2';
-    db.ref('rooms/' + roomId).update({ p2: myUid, p2_name: globalNickname, status: 'playing' });
+    
+    const roomRef = db.ref('rooms/' + roomId);
+    roomRef.update({ p2: myUid, p2_name: globalNickname, status: 'playing' });
+    
+    // ✨ 참가자가 창을 닫으면 상태를 abandoned로 변경 예약
+    roomRef.child('status').onDisconnect().set('abandoned');
+    
     enterMultiRoom(); 
 }
 
@@ -325,24 +333,22 @@ function finishMultiGame(msg, oppTarget) {
     if(msg.includes("승리")) { playSound(winSound); shootConfetti(); } else playSound(outSound);
     document.getElementById('multi-status-msg').innerHTML = `${msg} <br><span style="font-size:0.9em; color:#8b949e; display:block; margin-top:8px;">${oppName}의 숫자: ${oppTarget}</span>`;
     document.getElementById('multi-exit-btn').style.display = 'inline-block';
-    
-    // 🧹 방 상태를 'finished'로 바꿔서 로비에서 즉시 숨김
     db.ref('rooms/' + currentRoomId).update({status: 'finished'}); 
-    db.ref('rooms/' + currentRoomId).off(); // 내 실시간 리스너 끄기
+    db.ref('rooms/' + currentRoomId).off(); 
 }
 
 document.getElementById('multi-exit-btn').addEventListener('click', leaveMultiGame);
 
 function leaveMultiGame() {
     if (currentRoomId) { 
-        db.ref('rooms/' + currentRoomId).update({status: 'abandoned'}); 
+        // ✨ 정상적으로 나갈 때는 예약된 onDisconnect 삭제 명령을 취소!
+        db.ref('rooms/' + currentRoomId).onDisconnect().cancel();
         
-        // 🧹 2초 뒤 서버에서 방 데이터를 완전히 삭제 (DB 용량 최적화)
+        db.ref('rooms/' + currentRoomId).update({status: 'abandoned'}); 
         const roomIdToDelete = currentRoomId; 
         setTimeout(() => { db.ref('rooms/' + roomIdToDelete).remove(); }, 2000); 
-        
         db.ref('rooms/' + currentRoomId).off(); 
     }
     currentRoomId = null; 
-    document.getElementById('btn-multi-play').click(); // 로비 화면으로 이동!
+    document.getElementById('btn-multi-play').click(); 
 }
