@@ -14,9 +14,42 @@ firebase.initializeApp(firebaseConfig);
 const db = firebase.database();
 
 let globalNickname = "익명";
+const myUid = "user_" + Math.random().toString(36).substr(2, 9);
+let currentRoomId = null, myRole = null, multiPhase = '', currentTurn = 1, oppName = "상대방";
 
 // =======================================================================
-// 📺 1. 화면 전환 및 공통 로직
+// 🧹 [핵심] 완벽한 유령방 청소 로직
+// =======================================================================
+function forceQuitRoom() {
+    if (currentRoomId) {
+        db.ref('rooms/' + currentRoomId).onDisconnect().cancel(); // 예약 취소
+        
+        // 혼자 대기 중일 때 나가면 즉시 방 삭제!
+        if (multiPhase === 'waiting_player') {
+            db.ref('rooms/' + currentRoomId).remove();
+        } else {
+            // 게임 중일 때 나가면 상대방에게 알리기 위해 상태만 변경 후 2초 뒤 삭제
+            db.ref('rooms/' + currentRoomId).update({status: 'abandoned'});
+            const roomIdToDelete = currentRoomId;
+            setTimeout(() => { db.ref('rooms/' + roomIdToDelete).remove(); }, 2000);
+        }
+        
+        db.ref('rooms/' + currentRoomId).off();
+        currentRoomId = null;
+    }
+}
+
+// 브라우저 새로고침이나 뒤로가기, 탭 닫기 감지 시 즉시 방 폭파
+window.addEventListener('beforeunload', () => {
+    if (currentRoomId) {
+        if (multiPhase === 'waiting_player') db.ref('rooms/' + currentRoomId).remove();
+        else db.ref('rooms/' + currentRoomId).update({status: 'abandoned'});
+    }
+});
+
+
+// =======================================================================
+// 📺 1. 화면 전환 및 메뉴 로직
 // =======================================================================
 function showScreen(screenId) {
     document.querySelectorAll('.game-container').forEach(el => {
@@ -31,10 +64,19 @@ let isSoundOn = true;
 list.forEach((item) => item.addEventListener('click', function() {
     list.forEach((i) => i.classList.remove('active')); this.classList.add('active');
     const menuId = this.id;
-    if (menuId === 'menu-help') alert("⚾ 싱글: 기록 경쟁\n⚔️ 대전: 상대방 숫자 맞추기 (턴제 진행)\n\n💡 힌트 사용 시 15초 페널티 (싱글 전용)");
-    else if (menuId === 'menu-sound') { isSoundOn = !isSoundOn; document.getElementById('sound-icon-svg').setAttribute('name', isSoundOn ? 'volume-high-outline' : 'volume-mute-outline'); }
-    else if (menuId === 'menu-hint') useHint();
-    else if (menuId === 'menu-game') showScreen('screen-mode-select');
+    
+    if (menuId === 'menu-help') {
+        alert("⚾ 싱글: 기록 경쟁\n⚔️ 대전: 상대방 숫자 맞추기 (턴제 진행)\n\n💡 힌트 사용 시 15초 페널티 (싱글 전용)");
+    } else if (menuId === 'menu-sound') { 
+        isSoundOn = !isSoundOn; 
+        document.getElementById('sound-icon-svg').setAttribute('name', isSoundOn ? 'volume-high-outline' : 'volume-mute-outline'); 
+    } else if (menuId === 'menu-hint') {
+        useHint();
+    } else if (menuId === 'menu-game') {
+        forceQuitRoom(); // ✨ 하단 메뉴를 눌러서 도망가면 즉시 방 폭파!
+        db.ref('rooms').off(); // 로비 새로고침 끄기
+        showScreen('screen-mode-select');
+    }
 }));
 
 const outSound = new Audio('out.mp3'); const winSound = new Audio('win.mp3'); const strikeSound = new Audio('strike.mp3'); const ballSound = new Audio('ball.mp3');
@@ -55,6 +97,7 @@ function updateNickname() {
     globalNickname = inputName || "익명";
     document.getElementById('player-name').value = globalNickname;
 }
+
 
 // =======================================================================
 // 👤 2. 싱글 플레이 로직
@@ -155,10 +198,8 @@ document.getElementById('home-btn').addEventListener('click', () => showScreen('
 
 
 // =======================================================================
-// ⚔️ 3. 온라인 1:1 대전 플레이 로직 (유령 방 완벽 청소 적용)
+// ⚔️ 3. 온라인 1:1 대전 플레이 로직
 // =======================================================================
-const myUid = "user_" + Math.random().toString(36).substr(2, 9);
-let currentRoomId = null, myRole = null, multiPhase = '', currentTurn = 1, oppName = "상대방";
 
 document.getElementById('btn-multi-play').addEventListener('click', () => {
     updateNickname(); 
@@ -207,7 +248,7 @@ document.getElementById('btn-create-room').addEventListener('click', () => {
     
     newRoom.set({ status: 'waiting', p1: myUid, p1_name: globalNickname, p1_target: "", p2_target: "", turn: 1 });
     
-    // ✨ 방장이 창을 닫으면 즉시 방 삭제 예약
+    // ✨ 연결 끊김 시 무조건 방 삭제
     newRoom.onDisconnect().remove();
     
     enterMultiRoom(); 
@@ -220,7 +261,7 @@ function joinRoom(roomId) {
     const roomRef = db.ref('rooms/' + roomId);
     roomRef.update({ p2: myUid, p2_name: globalNickname, status: 'playing' });
     
-    // ✨ 참가자가 창을 닫으면 상태를 abandoned로 변경 예약
+    // ✨ 연결 끊김 시 상태를 abandoned로 변경
     roomRef.child('status').onDisconnect().set('abandoned');
     
     enterMultiRoom(); 
@@ -337,18 +378,13 @@ function finishMultiGame(msg, oppTarget) {
     db.ref('rooms/' + currentRoomId).off(); 
 }
 
-document.getElementById('multi-exit-btn').addEventListener('click', leaveMultiGame);
+// ✨ 로비로 정상적으로 돌아가는 버튼 클릭
+document.getElementById('multi-exit-btn').addEventListener('click', () => {
+    leaveMultiGame();
+});
 
+// ✨ 완전히 방을 벗어날 때 실행되는 공통 함수
 function leaveMultiGame() {
-    if (currentRoomId) { 
-        // ✨ 정상적으로 나갈 때는 예약된 onDisconnect 삭제 명령을 취소!
-        db.ref('rooms/' + currentRoomId).onDisconnect().cancel();
-        
-        db.ref('rooms/' + currentRoomId).update({status: 'abandoned'}); 
-        const roomIdToDelete = currentRoomId; 
-        setTimeout(() => { db.ref('rooms/' + roomIdToDelete).remove(); }, 2000); 
-        db.ref('rooms/' + currentRoomId).off(); 
-    }
-    currentRoomId = null; 
-    document.getElementById('btn-multi-play').click(); 
+    forceQuitRoom(); // 먼저 방을 완벽하게 폭파
+    document.getElementById('btn-multi-play').click(); // 로비 화면으로 이동!
 }
